@@ -215,7 +215,8 @@ td {
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: minmax(360px, 0.9fr) minmax(560px, 1.35fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: 14px;
   margin-top: 14px;
 }
@@ -235,9 +236,20 @@ td {
   padding: 14px;
 }
 
-.live-panel,
+.observation-panel {
+  order: 1;
+}
+
 .candidates-panel {
-  grid-column: 1 / -1;
+  order: 2;
+}
+
+.live-panel {
+  order: 3;
+}
+
+.pool-panel {
+  order: 4;
 }
 
 .panel-header {
@@ -309,11 +321,13 @@ td {
   color: #ffe7ad;
 }
 
+.observation-picker.positive input,
 .observation-picker.positive select {
   border-color: #297e57;
   background: #101812;
 }
 
+.observation-picker.negative input,
 .observation-picker.negative select {
   border-color: #7d6130;
   background: #18150f;
@@ -345,32 +359,29 @@ td {
 
 .observation-table th:nth-child(2),
 .observation-table td:nth-child(2) {
-  width: 70px;
+  width: 54px;
 }
 
 .observation-table th:nth-child(4),
 .observation-table td:nth-child(4) {
-  width: 112px;
+  width: 72px;
 }
 
-.pill-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+.observation-result {
+  font-weight: 900;
+  text-align: center;
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  max-width: 220px;
-  min-height: 24px;
-  border: 1px solid #4b5548;
-  border-radius: 999px;
-  background: #252b24;
-  color: #edf4e9;
-  padding: 3px 8px;
-  font-size: 12px;
-  overflow-wrap: anywhere;
+.observation-result.positive {
+  color: #bfffe0;
+}
+
+.observation-result.negative {
+  color: #ffe7ad;
+}
+
+.observation-card-cell {
+  color: #f5f8ee;
 }
 
 .tag {

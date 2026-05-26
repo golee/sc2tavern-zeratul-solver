@@ -259,27 +259,6 @@ function renderDatalist() {
   el.cardOptions.replaceChildren(...options);
 }
 
-function renderObservationSelects() {
-  [
-    [el.positiveObservationSelect, "Y 카드 선택"],
-    [el.negativeObservationSelect, "N 카드 선택"],
-  ].forEach(([select, placeholder]) => {
-    const placeholderOption = document.createElement("option");
-    placeholderOption.value = "";
-    placeholderOption.textContent = placeholder;
-
-    const options = state.cards.map((card) => {
-      const option = document.createElement("option");
-      option.value = card.name;
-      option.textContent = card.name;
-      return option;
-    });
-
-    select.replaceChildren(placeholderOption, ...options);
-    select.value = "";
-  });
-}
-
 function renderInputGrid(container, prefix, values) {
   if (!container.childElementCount) {
     const inputs = Array.from({ length: MAX_OBSERVATION_CARDS }, (_, index) => {
@@ -335,19 +314,13 @@ function renderObservations() {
     tr.append(makeCell(String(observation.id)));
 
     const resultCell = document.createElement("td");
-    resultCell.append(makeTag(resultLabel(observation.result), observation.result === "Y" ? "yes" : "neutral"));
+    resultCell.className = `observation-result ${observation.result === "Y" ? "positive" : "negative"}`;
+    resultCell.textContent = resultLabel(observation.result);
     tr.append(resultCell);
 
     const cardsCell = document.createElement("td");
-    const pills = document.createElement("div");
-    pills.className = "pill-row";
-    observation.cards.forEach((card) => {
-      const pill = document.createElement("span");
-      pill.className = "pill";
-      pill.textContent = card;
-      pills.append(pill);
-    });
-    cardsCell.append(pills);
+    cardsCell.className = "observation-card-cell";
+    cardsCell.textContent = observation.cards.join(", ");
     tr.append(cardsCell);
 
     const actionCell = document.createElement("td");
@@ -468,7 +441,6 @@ function renderAll() {
   el.candidateFilter.value = state.filter;
   el.candidateSearch.value = state.search;
   renderDatalist();
-  renderObservationSelects();
   renderInputGrid(el.liveInputs, "liveCard", state.currentCards);
   renderCardPoolTable();
   renderObservations();
@@ -498,10 +470,54 @@ function addObservation(result, cardName) {
   renderAll();
 }
 
-function handleObservationSelect(event, result) {
-  const cardName = event.target.value;
-  if (!cardName) return;
+function findCardName(value) {
+  const key = normalizeName(value);
+  if (!key) return "";
+  const card = state.cards.find((item) => item.key === key);
+  return card ? card.name : "";
+}
+
+function commitObservationPicker(input, result, showInvalid) {
+  const rawValue = displayValue(input.value);
+  if (!rawValue) return;
+
+  const cardName = findCardName(rawValue);
+  if (!cardName) {
+    if (showInvalid) {
+      showToast("카드풀에 있는 카드명을 정확히 선택하세요.");
+      input.select();
+    }
+    return;
+  }
+
   addObservation(result, cardName);
+  input.value = "";
+}
+
+function handleObservationPicker(event, result) {
+  if (event.type === "keydown") {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitObservationPicker(event.target, result, true);
+    }
+    if (event.key === "Escape") {
+      event.target.value = "";
+    }
+    return;
+  }
+
+  if (event.type === "input") {
+    if (event.isComposing) return;
+    commitObservationPicker(event.target, result, false);
+    return;
+  }
+
+  if (event.type === "compositionend") {
+    commitObservationPicker(event.target, result, false);
+    return;
+  }
+
+  commitObservationPicker(event.target, result, true);
 }
 
 function updateLiveFromInputs() {
@@ -526,8 +542,15 @@ function copyCandidates() {
 }
 
 function bindEvents() {
-  el.positiveObservationSelect.addEventListener("change", (event) => handleObservationSelect(event, "Y"));
-  el.negativeObservationSelect.addEventListener("change", (event) => handleObservationSelect(event, "N"));
+  [
+    [el.positiveObservationSelect, "Y"],
+    [el.negativeObservationSelect, "N"],
+  ].forEach(([input, result]) => {
+    input.addEventListener("input", (event) => handleObservationPicker(event, result));
+    input.addEventListener("change", (event) => handleObservationPicker(event, result));
+    input.addEventListener("compositionend", (event) => handleObservationPicker(event, result));
+    input.addEventListener("keydown", (event) => handleObservationPicker(event, result));
+  });
   document.getElementById("clearObservationsBtn").addEventListener("click", () => {
     if (!window.confirm("관측값을 모두 지울까요?")) return;
     state.observations = [];
