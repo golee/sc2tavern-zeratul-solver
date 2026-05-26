@@ -1,8 +1,8 @@
 "use strict";
 
+const { disassemble, getChoseong } = window.EsHangul;
 const MAX_OBSERVATION_CARDS = 10;
 const MAX_OBSERVATIONS = 30;
-const COMBOBOX_OPTION_LIMIT = 12;
 const CLOSE_VALUE_THRESHOLD = 200;
 const BASE_POOL_FILTERS = [
   { type: "all", value: "전체", label: "전체" },
@@ -50,6 +50,17 @@ function normalizeName(value) {
     .trim()
     .replace(/\s+/g, " ")
     .toLowerCase();
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function compactSearchText(value) {
+  return normalizeSearchText(value).replace(/\s+/g, "");
 }
 
 function displayValue(value) {
@@ -246,14 +257,49 @@ function formatNumber(value) {
   return Number.isFinite(value) ? value.toLocaleString("ko-KR") : "-";
 }
 
-function formatRange(values) {
-  const finiteValues = values.filter(Number.isFinite);
-  if (!finiteValues.length) return "-";
+function getUniqueFiniteValues(values) {
+  return [...new Set(values.filter(Number.isFinite))]
+    .sort((left, right) => left - right);
+}
 
-  const min = Math.min(...finiteValues);
-  const max = Math.max(...finiteValues);
-  if (min === max) return formatNumber(min);
-  return `${formatNumber(min)} ~ ${formatNumber(max)}`;
+function formatDiscreteValues(values) {
+  const uniqueValues = getUniqueFiniteValues(values);
+  if (!uniqueValues.length) return "-";
+  return uniqueValues.map(formatNumber).join(", ");
+}
+
+function formatIntegerSegments(values) {
+  const uniqueValues = getUniqueFiniteValues(values);
+  if (!uniqueValues.length) return "-";
+
+  const segments = [];
+  let start = uniqueValues[0];
+  let end = uniqueValues[0];
+
+  uniqueValues.slice(1).forEach((value) => {
+    if (Number.isInteger(value) && Number.isInteger(end) && value === end + 1) {
+      end = value;
+      return;
+    }
+
+    segments.push([start, end]);
+    start = value;
+    end = value;
+  });
+  segments.push([start, end]);
+
+  return segments
+    .map(([segmentStart, segmentEnd]) => (
+      segmentStart === segmentEnd
+        ? formatNumber(segmentStart)
+        : `${formatNumber(segmentStart)}~${formatNumber(segmentEnd)}`
+    ))
+    .join(", ");
+}
+
+function setConditionText(element, text) {
+  element.textContent = text;
+  element.title = text === "-" ? "" : text;
 }
 
 function setEmptyRow(tbody, colSpan, message) {
@@ -329,24 +375,46 @@ function findCard(value) {
   return state.cards.find((item) => item.key === key) || null;
 }
 
+function getSearchTokens(value) {
+  const compact = compactSearchText(value);
+  if (!compact) {
+    return { compact: "", disassembled: "", choseong: "" };
+  }
+
+  return {
+    compact,
+    disassembled: disassemble(compact),
+    choseong: getChoseong(compact),
+  };
+}
+
+function getCardSearchTokens(card) {
+  if (!card.searchTokens) {
+    card.searchTokens = getSearchTokens(card.name);
+  }
+  return card.searchTokens;
+}
+
+function getSuggestionScore(card, queryTokens) {
+  if (!queryTokens.compact) return 3;
+
+  const cardTokens = getCardSearchTokens(card);
+  if (cardTokens.compact === queryTokens.compact) return 0;
+  if (cardTokens.compact.startsWith(queryTokens.compact)) return 1;
+  if (cardTokens.disassembled.startsWith(queryTokens.disassembled)) return 2;
+  if (cardTokens.choseong.startsWith(queryTokens.choseong)) return 3;
+  if (cardTokens.compact.includes(queryTokens.compact)) return 4;
+  if (cardTokens.disassembled.includes(queryTokens.disassembled)) return 5;
+  if (cardTokens.choseong.includes(queryTokens.choseong)) return 6;
+  return null;
+}
+
 function getCardSuggestions(value) {
-  const query = normalizeName(value);
+  const queryTokens = getSearchTokens(value);
   return state.cards
     .map((card, index) => {
-      const name = normalizeName(card.name);
-      let score = 3;
-      if (query) {
-        if (name === query) {
-          score = 0;
-        } else if (name.startsWith(query)) {
-          score = 1;
-        } else if (name.includes(query)) {
-          score = 2;
-        } else {
-          return null;
-        }
-      }
-
+      const score = getSuggestionScore(card, queryTokens);
+      if (score == null) return null;
       return { card, index, score };
     })
     .filter(Boolean)
@@ -355,7 +423,6 @@ function getCardSuggestions(value) {
       if (left.card.enabled !== right.card.enabled) return left.card.enabled ? -1 : 1;
       return left.index - right.index;
     })
-    .slice(0, COMBOBOX_OPTION_LIMIT)
     .map((item) => item.card);
 }
 
@@ -470,13 +537,12 @@ function chooseComboCard(input, cardName) {
 function handleComboInput(event) {
   const input = getComboInputFromEvent(event);
   if (!input || !getCombobox(input)) return;
-  if (event.isComposing) return;
 
   const combobox = getCombobox(input);
   const mode = combobox.dataset.comboMode;
   const exactCard = findCard(input.value);
 
-  if (mode === "observation" && exactCard) {
+  if (mode === "observation" && exactCard && !event.isComposing) {
     chooseComboCard(input, exactCard.name);
     return;
   }
@@ -769,9 +835,9 @@ function renderConditionSummary(candidates) {
   const races = [...new Set(possible.map((candidate) => candidate.race).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, "ko"));
 
-  el.conditionRaces.textContent = races.length ? races.join(", ") : "-";
-  el.conditionValueRange.textContent = formatRange(possible.map((candidate) => candidate.value));
-  el.conditionUnitRange.textContent = formatRange(possible.map((candidate) => candidate.number));
+  setConditionText(el.conditionRaces, races.length ? races.join(", ") : "-");
+  setConditionText(el.conditionValueRange, formatDiscreteValues(possible.map((candidate) => candidate.value)));
+  setConditionText(el.conditionUnitRange, formatIntegerSegments(possible.map((candidate) => candidate.number)));
 }
 
 function renderAll() {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>제라툴 영능 추론기</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link rel="stylesheet" href="styles.css?v=9">
   </head>
   <body>
     <main class="app-shell">
@@ -158,7 +158,7 @@
           <div class="panel-header">
             <div>
               <h2 id="conditionsTitle">조건 요약</h2>
-              <p>남은 후보가 가질 수 있는 현재 범위입니다.</p>
+              <p>남은 후보가 가질 수 있는 현재 조건입니다.</p>
             </div>
           </div>
           <div class="condition-grid">
@@ -167,11 +167,11 @@
               <strong id="conditionRaces">-</strong>
             </div>
             <div class="condition-item">
-              <span>투력 범위</span>
+              <span>가능 투력</span>
               <strong id="conditionValueRange">-</strong>
             </div>
             <div class="condition-item">
-              <span>유닛 수 범위</span>
+              <span>가능 유닛 수</span>
               <strong id="conditionUnitRange">-</strong>
             </div>
           </div>
@@ -190,6 +190,7 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="cardpool-data.js?v=2"></script>
-    <script src="app.js?v=3"></script>
+    <script src="vendor/es-hangul.browser.js?v=1"></script>
+    <script src="app.js?v=5"></script>
   </body>
 </html>
