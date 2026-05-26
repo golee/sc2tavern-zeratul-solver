@@ -283,34 +283,40 @@ td {
   width: 92px;
 }
 
-.observation-editor {
+.observation-picker-grid {
   display: grid;
-  grid-template-columns: 96px 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
 }
 
-.segmented {
+.observation-picker {
   display: grid;
-  grid-template-columns: 1fr;
   gap: 6px;
+  min-width: 0;
 }
 
-.segment {
-  min-height: 42px;
+.observation-picker span {
+  font-size: 13px;
   font-weight: 800;
 }
 
-.segment.active[data-result="Y"] {
-  border-color: var(--green);
-  background: var(--green-2);
-  color: #c9ffe5;
+.observation-picker.positive span {
+  color: #bfffe0;
 }
 
-.segment.active[data-result="N"] {
-  border-color: var(--amber);
-  background: var(--amber-2);
+.observation-picker.negative span {
   color: #ffe7ad;
+}
+
+.observation-picker.positive select {
+  border-color: #297e57;
+  background: #101812;
+}
+
+.observation-picker.negative select {
+  border-color: #7d6130;
+  background: #18150f;
 }
 
 .card-input-grid {
@@ -517,7 +523,7 @@ td {
 
   .topbar,
   .panel-header,
-  .observation-editor {
+  .observation-picker-grid {
     display: grid;
     grid-template-columns: 1fr;
   }
@@ -536,10 +542,6 @@ td {
 
   .metric-strip {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
-  }
-
-  .segmented {
-    grid-template-columns: repeat(2, 1fr);
   }
 
   .card-input-grid {

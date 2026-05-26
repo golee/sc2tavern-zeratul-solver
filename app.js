@@ -2,6 +2,7 @@
 
 const MAX_OBSERVATION_CARDS = 10;
 const MAX_OBSERVATIONS = 30;
+const CLOSE_VALUE_THRESHOLD = 200;
 
 const defaultPoolText = (typeof window.ZERATUL_DEFAULT_CARD_POOL === "string" && window.ZERATUL_DEFAULT_CARD_POOL.trim())
   ? window.ZERATUL_DEFAULT_CARD_POOL.trim()
@@ -11,14 +12,14 @@ const state = {
   cards: [],
   observations: [],
   currentCards: Array(MAX_OBSERVATION_CARDS).fill(""),
-  selectedResult: "Y",
   filter: "possible",
   search: "",
 };
 
 const el = {
   poolTableBody: document.getElementById("poolTableBody"),
-  observationInputs: document.getElementById("observationInputs"),
+  positiveObservationSelect: document.getElementById("positiveObservationSelect"),
+  negativeObservationSelect: document.getElementById("negativeObservationSelect"),
   liveInputs: document.getElementById("liveInputs"),
   observationBody: document.getElementById("observationBody"),
   liveBody: document.getElementById("liveBody"),
@@ -86,6 +87,12 @@ function parseEnabled(value) {
   return !["n", "no", "false", "0", "x", "off", "비활성", "사용안함", "아니오"].includes(normalized);
 }
 
+function parseMemoNumber(memo, label) {
+  const match = String(memo || "").match(new RegExp(`${label}\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`));
+  if (!match) return NaN;
+  return Number(match[1]);
+}
+
 function parseCardPool(text) {
   const seen = new Set();
   const cards = [];
@@ -101,6 +108,7 @@ function parseCardPool(text) {
     const key = normalizeName(name);
     if (seen.has(key)) return;
     seen.add(key);
+    const memo = displayValue(cells[4]);
 
     cards.push({
       name,
@@ -108,11 +116,32 @@ function parseCardPool(text) {
       race: displayValue(cells[1]),
       tier: displayValue(cells[2]),
       enabled: parseEnabled(cells[3]),
-      memo: displayValue(cells[4]),
+      memo,
+      number: parseMemoNumber(memo, "유닛"),
+      value: parseMemoNumber(memo, "가치"),
     });
   });
 
   return cards;
+}
+
+function sameValue(left, right) {
+  const leftValue = displayValue(left);
+  const rightValue = displayValue(right);
+  return leftValue && rightValue && normalizeName(leftValue) === normalizeName(rightValue);
+}
+
+function bothFinite(left, right) {
+  return Number.isFinite(left) && Number.isFinite(right);
+}
+
+function isCloseCard(picked, candidate) {
+  if (!picked || !candidate) return false;
+  if (picked.key === candidate.key) return true;
+  if (sameValue(picked.race, candidate.race)) return true;
+  if (bothFinite(picked.number, candidate.number) && picked.number === candidate.number) return true;
+  return bothFinite(picked.value, candidate.value)
+    && Math.abs(picked.value - candidate.value) <= CLOSE_VALUE_THRESHOLD;
 }
 
 function getCleanCards(values) {
@@ -131,11 +160,14 @@ function getCleanCards(values) {
 }
 
 function computeCandidates() {
+  const cardByKey = new Map(state.cards.map((card) => [card.key, card]));
   const activeObservations = state.observations
     .filter((observation) => ["Y", "N"].includes(observation.result))
     .map((observation) => ({
       ...observation,
-      cardSet: new Set(observation.cards.map(normalizeName)),
+      pickedCards: observation.cards
+        .map((cardName) => cardByKey.get(normalizeName(cardName)))
+        .filter(Boolean),
     }));
   const liveSet = new Set(getCleanCards(state.currentCards).map(normalizeName));
 
@@ -145,9 +177,9 @@ function computeCandidates() {
     let negativeBlocks = 0;
 
     activeObservations.forEach((observation) => {
-      const contains = observation.cardSet.has(card.key);
+      const close = observation.pickedCards.some((picked) => isCloseCard(picked, card));
       if (observation.result === "Y") {
-        if (contains) {
+        if (close) {
           positiveHits += 1;
         } else {
           contradictions.push(`#${observation.id} Y`);
@@ -155,7 +187,7 @@ function computeCandidates() {
       }
 
       if (observation.result === "N") {
-        if (contains) {
+        if (close) {
           contradictions.push(`#${observation.id} N`);
         } else {
           negativeBlocks += 1;
@@ -205,6 +237,10 @@ function setEmptyRow(tbody, colSpan, message) {
   tbody.append(tr);
 }
 
+function resultLabel(result) {
+  return result;
+}
+
 function showToast(message) {
   el.toast.textContent = message;
   el.toast.classList.add("show");
@@ -221,6 +257,27 @@ function renderDatalist() {
     return option;
   });
   el.cardOptions.replaceChildren(...options);
+}
+
+function renderObservationSelects() {
+  [
+    [el.positiveObservationSelect, "Y 카드 선택"],
+    [el.negativeObservationSelect, "N 카드 선택"],
+  ].forEach(([select, placeholder]) => {
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = placeholder;
+
+    const options = state.cards.map((card) => {
+      const option = document.createElement("option");
+      option.value = card.name;
+      option.textContent = card.name;
+      return option;
+    });
+
+    select.replaceChildren(placeholderOption, ...options);
+    select.value = "";
+  });
 }
 
 function renderInputGrid(container, prefix, values) {
@@ -245,19 +302,6 @@ function renderInputGrid(container, prefix, values) {
 
 function readInputs(container) {
   return [...container.querySelectorAll("input")].map((input) => input.value);
-}
-
-function setObservationEditor(result, cards) {
-  state.selectedResult = result;
-  document.querySelectorAll(".segment").forEach((button) => {
-    const active = button.dataset.result === result;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  renderInputGrid(el.observationInputs, "observationCard", [
-    ...cards,
-    ...Array(MAX_OBSERVATION_CARDS).fill(""),
-  ].slice(0, MAX_OBSERVATION_CARDS));
 }
 
 function renderCardPoolTable() {
@@ -291,7 +335,7 @@ function renderObservations() {
     tr.append(makeCell(String(observation.id)));
 
     const resultCell = document.createElement("td");
-    resultCell.append(makeTag(observation.result, observation.result === "Y" ? "yes" : "neutral"));
+    resultCell.append(makeTag(resultLabel(observation.result), observation.result === "Y" ? "yes" : "neutral"));
     tr.append(resultCell);
 
     const cardsCell = document.createElement("td");
@@ -309,18 +353,13 @@ function renderObservations() {
     const actionCell = document.createElement("td");
     const actions = document.createElement("div");
     actions.className = "row-actions";
-    const editButton = document.createElement("button");
-    editButton.type = "button";
-    editButton.textContent = "수정";
-    editButton.dataset.action = "edit-observation";
-    editButton.dataset.id = String(observation.id);
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.textContent = "삭제";
     deleteButton.className = "danger";
     deleteButton.dataset.action = "delete-observation";
     deleteButton.dataset.id = String(observation.id);
-    actions.append(editButton, deleteButton);
+    actions.append(deleteButton);
     actionCell.append(actions);
     tr.append(actionCell);
 
@@ -429,7 +468,7 @@ function renderAll() {
   el.candidateFilter.value = state.filter;
   el.candidateSearch.value = state.search;
   renderDatalist();
-  renderInputGrid(el.observationInputs, "observationCard", readInputs(el.observationInputs));
+  renderObservationSelects();
   renderInputGrid(el.liveInputs, "liveCard", state.currentCards);
   renderCardPoolTable();
   renderObservations();
@@ -438,13 +477,13 @@ function renderAll() {
   renderMetrics(candidates);
 }
 
-function addObservation() {
+function addObservation(result, cardName) {
   if (state.observations.length >= MAX_OBSERVATIONS) {
     showToast(`관측은 최대 ${MAX_OBSERVATIONS}개까지 유지합니다.`);
     return;
   }
 
-  const cards = getCleanCards(readInputs(el.observationInputs));
+  const cards = getCleanCards([cardName]);
   if (!cards.length) {
     showToast("관측 카드가 비어 있습니다.");
     return;
@@ -453,15 +492,16 @@ function addObservation() {
   const nextId = state.observations.reduce((max, observation) => Math.max(max, observation.id), 0) + 1;
   state.observations.push({
     id: nextId,
-    result: state.selectedResult,
+    result,
     cards,
   });
-  setObservationEditor(state.selectedResult, []);
   renderAll();
 }
 
-function clearObservationEditor() {
-  setObservationEditor(state.selectedResult, []);
+function handleObservationSelect(event, result) {
+  const cardName = event.target.value;
+  if (!cardName) return;
+  addObservation(result, cardName);
 }
 
 function updateLiveFromInputs() {
@@ -486,7 +526,8 @@ function copyCandidates() {
 }
 
 function bindEvents() {
-  document.getElementById("addObservationBtn").addEventListener("click", addObservation);
+  el.positiveObservationSelect.addEventListener("change", (event) => handleObservationSelect(event, "Y"));
+  el.negativeObservationSelect.addEventListener("change", (event) => handleObservationSelect(event, "N"));
   document.getElementById("clearObservationsBtn").addEventListener("click", () => {
     if (!window.confirm("관측값을 모두 지울까요?")) return;
     state.observations = [];
@@ -499,20 +540,6 @@ function bindEvents() {
   document.getElementById("copyCandidatesBtn").addEventListener("click", copyCandidates);
 
   el.liveInputs.addEventListener("input", updateLiveFromInputs);
-  el.observationInputs.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-      addObservation();
-    }
-    if (event.key === "Escape") {
-      clearObservationEditor();
-    }
-  });
-
-  document.querySelectorAll(".segment").forEach((button) => {
-    button.addEventListener("click", () => {
-      setObservationEditor(button.dataset.result, readInputs(el.observationInputs));
-    });
-  });
 
   el.observationBody.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-action]");
@@ -521,12 +548,6 @@ function bindEvents() {
     const id = Number(button.dataset.id);
     const observation = state.observations.find((item) => item.id === id);
     if (!observation) return;
-
-    if (button.dataset.action === "edit-observation") {
-      setObservationEditor(observation.result, observation.cards);
-      state.observations = state.observations.filter((item) => item.id !== id);
-      renderAll();
-    }
 
     if (button.dataset.action === "delete-observation") {
       state.observations = state.observations.filter((item) => item.id !== id);
@@ -545,5 +566,4 @@ function bindEvents() {
 }
 
 bindEvents();
-setObservationEditor(state.selectedResult, []);
 renderAll();

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>제라툴 영능 추론기</title>
-    <link rel="stylesheet" href="styles.css?v=2">
+    <link rel="stylesheet" href="styles.css?v=3">
   </head>
   <body>
     <main class="app-shell">
@@ -48,7 +48,7 @@
           <div class="panel-header">
             <div>
               <h2 id="poolTitle">카드풀</h2>
-              <p>카드풀은 `cardpool-data.js`에서만 수정합니다.</p>
+              <p>예언 후보와 상점에서 볼 수 있는 카드 목록입니다.</p>
             </div>
           </div>
           <div class="table-frame pool-table">
@@ -71,19 +71,21 @@
           <div class="panel-header">
             <div>
               <h2 id="observationTitle">관측 입력</h2>
-              <p>Y = 보상/은신칼/성공 신호가 뜬 묶음, N = 신호가 안 뜬 묶음</p>
+              <p>종족, 유닛 수, 가치 200 이내 중 하나라도 맞으면 Y로 계산합니다.</p>
             </div>
             <div class="button-row">
-              <button type="button" id="addObservationBtn">관측 추가</button>
               <button type="button" class="danger" id="clearObservationsBtn">초기화</button>
             </div>
           </div>
-          <div class="observation-editor">
-            <div class="segmented" role="radiogroup" aria-label="관측 결과">
-              <button type="button" class="segment active" data-result="Y" aria-pressed="true">Y</button>
-              <button type="button" class="segment" data-result="N" aria-pressed="false">N</button>
-            </div>
-            <div class="card-input-grid" id="observationInputs"></div>
+          <div class="observation-picker-grid">
+            <label class="observation-picker positive">
+              <span>Y 선택</span>
+              <select id="positiveObservationSelect" aria-label="Y 관측 카드 선택"></select>
+            </label>
+            <label class="observation-picker negative">
+              <span>N 선택</span>
+              <select id="negativeObservationSelect" aria-label="N 관측 카드 선택"></select>
+            </label>
           </div>
           <div class="table-frame observation-table">
             <table>
@@ -91,7 +93,7 @@
                 <tr>
                   <th>#</th>
                   <th>결과</th>
-                  <th>카드 묶음</th>
+                  <th>카드</th>
                   <th></th>
                 </tr>
               </thead>
@@ -104,7 +106,7 @@
           <div class="panel-header">
             <div>
               <h2 id="liveTitle">현재 턴</h2>
-              <p>엑셀 `Live` 시트처럼 지금 보이는 카드의 우선순위를 계산합니다.</p>
+              <p>지금 보이는 카드를 넣으면 확인할 만한 후보를 바로 골라줍니다.</p>
             </div>
             <div class="button-row">
               <button type="button" id="clearLiveBtn">현재 카드 비우기</button>
@@ -131,7 +133,7 @@
           <div class="panel-header">
             <div>
               <h2 id="candidatesTitle">후보 목록</h2>
-              <p>엑셀 `Candidates` 시트의 contradiction=0 후보만 남깁니다.</p>
+              <p>지금까지의 관측과 맞는 예언 후보만 남겨 보여줍니다.</p>
             </div>
             <div class="filters">
               <input id="candidateSearch" type="search" placeholder="카드 검색">
@@ -150,8 +152,8 @@
                   <th>카드</th>
                   <th>가능</th>
                   <th>모순</th>
-                  <th>Y 적중</th>
-                  <th>N 배제</th>
+                  <th>Y 일치</th>
+                  <th>N 통과</th>
                   <th>현재</th>
                   <th>액션</th>
                 </tr>
