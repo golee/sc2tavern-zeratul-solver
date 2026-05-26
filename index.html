@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>제라툴 영능 추론기</title>
+    <link rel="stylesheet" href="styles.css?v=2">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span>
+          </div>
+          <div>
+            <h1>제라툴 영능 추론기</h1>
+            <p>스타선술집 PVP 카드풀 기반 후보 좁히기</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <a class="link-button" href="https://wiki.biligame.com/sctavern/%E9%A6%96%E9%A1%B5" target="_blank" rel="noreferrer">BWIKI</a>
+          <button type="button" id="copyCandidatesBtn">후보 복사</button>
+        </div>
+      </header>
+
+      <section class="metric-strip" aria-label="현재 추론 상태">
+        <div>
+          <span>카드풀</span>
+          <strong id="metricCardPool">0</strong>
+        </div>
+        <div>
+          <span>관측</span>
+          <strong id="metricObservations">0</strong>
+        </div>
+        <div>
+          <span>남은 후보</span>
+          <strong id="metricPossible">0</strong>
+        </div>
+        <div>
+          <span>현재 보임</span>
+          <strong id="metricSeen">0</strong>
+        </div>
+      </section>
+
+      <section class="workspace-grid">
+        <section class="panel pool-panel" aria-labelledby="poolTitle">
+          <div class="panel-header">
+            <div>
+              <h2 id="poolTitle">카드풀</h2>
+              <p>카드풀은 `cardpool-data.js`에서만 수정합니다.</p>
+            </div>
+          </div>
+          <div class="table-frame pool-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>카드</th>
+                  <th>후보</th>
+                  <th>종족</th>
+                  <th>티어</th>
+                  <th>메모</th>
+                </tr>
+              </thead>
+              <tbody id="poolTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel observation-panel" aria-labelledby="observationTitle">
+          <div class="panel-header">
+            <div>
+              <h2 id="observationTitle">관측 입력</h2>
+              <p>Y = 보상/은신칼/성공 신호가 뜬 묶음, N = 신호가 안 뜬 묶음</p>
+            </div>
+            <div class="button-row">
+              <button type="button" id="addObservationBtn">관측 추가</button>
+              <button type="button" class="danger" id="clearObservationsBtn">초기화</button>
+            </div>
+          </div>
+          <div class="observation-editor">
+            <div class="segmented" role="radiogroup" aria-label="관측 결과">
+              <button type="button" class="segment active" data-result="Y" aria-pressed="true">Y</button>
+              <button type="button" class="segment" data-result="N" aria-pressed="false">N</button>
+            </div>
+            <div class="card-input-grid" id="observationInputs"></div>
+          </div>
+          <div class="table-frame observation-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>결과</th>
+                  <th>카드 묶음</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="observationBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel live-panel" aria-labelledby="liveTitle">
+          <div class="panel-header">
+            <div>
+              <h2 id="liveTitle">현재 턴</h2>
+              <p>엑셀 `Live` 시트처럼 지금 보이는 카드의 우선순위를 계산합니다.</p>
+            </div>
+            <div class="button-row">
+              <button type="button" id="clearLiveBtn">현재 카드 비우기</button>
+            </div>
+          </div>
+          <div class="card-input-grid live-inputs" id="liveInputs"></div>
+          <div class="table-frame">
+            <table>
+              <thead>
+                <tr>
+                  <th>추천</th>
+                  <th>카드</th>
+                  <th>가능</th>
+                  <th>모순</th>
+                  <th>근거</th>
+                </tr>
+              </thead>
+              <tbody id="liveBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel candidates-panel" aria-labelledby="candidatesTitle">
+          <div class="panel-header">
+            <div>
+              <h2 id="candidatesTitle">후보 목록</h2>
+              <p>엑셀 `Candidates` 시트의 contradiction=0 후보만 남깁니다.</p>
+            </div>
+            <div class="filters">
+              <input id="candidateSearch" type="search" placeholder="카드 검색">
+              <select id="candidateFilter" aria-label="후보 필터">
+                <option value="possible">가능 후보</option>
+                <option value="seen">현재 보임</option>
+                <option value="excluded">제외</option>
+                <option value="all">전체</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-frame candidates-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>카드</th>
+                  <th>가능</th>
+                  <th>모순</th>
+                  <th>Y 적중</th>
+                  <th>N 배제</th>
+                  <th>현재</th>
+                  <th>액션</th>
+                </tr>
+              </thead>
+              <tbody id="candidateBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <footer class="source-strip">
+        <span>자료 기준</span>
+        <a href="https://wiki.biligame.com/sctavern/%E9%A6%96%E9%A1%B5" target="_blank" rel="noreferrer">BWIKI 홈</a>
+        <a href="https://wiki.biligame.com/sctavern/%E5%8D%A1%E7%89%8C%E5%9B%BE%E9%89%B4" target="_blank" rel="noreferrer">BWIKI 카드 도감</a>
+        <a href="https://namu.moe/w/%EC%8A%A4%ED%83%80%20%EC%84%A0%EC%88%A0%EC%A7%91%20%EC%A0%84%ED%88%AC/%EC%B9%B4%EB%93%9C" target="_blank" rel="noreferrer">나무위키 카드</a>
+        <a href="https://gameindustryremnant.github.io/SCTavernVoidSeekerPublic/" target="_blank" rel="noreferrer">SCTavernVoidSeekerPublic</a>
+        <span>기본 카드풀은 SCTavernVoidSeekerPublic 공개 데이터와 나무위키 명칭을 기준으로 한국어화했습니다. 불확실한 항목은 메모에 표시됩니다.</span>
+      </footer>
+    </main>
+
+    <datalist id="cardOptions"></datalist>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="cardpool-data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
