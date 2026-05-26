@@ -2,6 +2,7 @@
 
 const MAX_OBSERVATION_CARDS = 10;
 const MAX_OBSERVATIONS = 30;
+const COMBOBOX_OPTION_LIMIT = 12;
 const CLOSE_VALUE_THRESHOLD = 200;
 const BASE_POOL_FILTERS = [
   { type: "all", value: "전체", label: "전체" },
@@ -35,7 +36,6 @@ const el = {
   candidateBody: document.getElementById("candidateBody"),
   candidateSearch: document.getElementById("candidateSearch"),
   candidateFilter: document.getElementById("candidateFilter"),
-  cardOptions: document.getElementById("cardOptions"),
   observationCount: document.getElementById("observationCount"),
   candidateCount: document.getElementById("candidateCount"),
   conditionRaces: document.getElementById("conditionRaces"),
@@ -280,28 +280,38 @@ function showToast(message) {
   }, 2200);
 }
 
-function renderDatalist() {
-  const options = state.cards.map((card) => {
-    const option = document.createElement("option");
-    option.value = card.name;
-    return option;
-  });
-  el.cardOptions.replaceChildren(...options);
-}
-
 function renderInputGrid(container, prefix, values) {
   if (!container.childElementCount) {
-    const inputs = Array.from({ length: MAX_OBSERVATION_CARDS }, (_, index) => {
+    const controls = Array.from({ length: MAX_OBSERVATION_CARDS }, (_, index) => {
+      const combobox = document.createElement("div");
+      combobox.className = "card-combobox";
+      combobox.dataset.comboMode = "live";
+
       const input = document.createElement("input");
       input.type = "text";
       input.autocomplete = "off";
-      input.setAttribute("list", "cardOptions");
+      input.spellcheck = false;
       input.placeholder = `카드 ${index + 1}`;
+      input.setAttribute("aria-autocomplete", "list");
+      input.setAttribute("aria-expanded", "false");
       input.dataset.index = String(index);
       input.id = `${prefix}${index + 1}`;
-      return input;
+
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "combo-toggle";
+      toggle.tabIndex = -1;
+      toggle.setAttribute("aria-label", "카드 목록 열기");
+      toggle.textContent = "▾";
+
+      const menu = document.createElement("div");
+      menu.className = "combo-menu";
+      menu.setAttribute("role", "listbox");
+
+      combobox.append(input, toggle, menu);
+      return combobox;
     });
-    container.replaceChildren(...inputs);
+    container.replaceChildren(...controls);
   }
 
   [...container.querySelectorAll("input")].forEach((input, index) => {
@@ -311,6 +321,255 @@ function renderInputGrid(container, prefix, values) {
 
 function readInputs(container) {
   return [...container.querySelectorAll("input")].map((input) => input.value);
+}
+
+function findCard(value) {
+  const key = normalizeName(value);
+  if (!key) return null;
+  return state.cards.find((item) => item.key === key) || null;
+}
+
+function getCardSuggestions(value) {
+  const query = normalizeName(value);
+  return state.cards
+    .map((card, index) => {
+      const name = normalizeName(card.name);
+      let score = 3;
+      if (query) {
+        if (name === query) {
+          score = 0;
+        } else if (name.startsWith(query)) {
+          score = 1;
+        } else if (name.includes(query)) {
+          score = 2;
+        } else {
+          return null;
+        }
+      }
+
+      return { card, index, score };
+    })
+    .filter(Boolean)
+    .sort((left, right) => {
+      if (left.score !== right.score) return left.score - right.score;
+      if (left.card.enabled !== right.card.enabled) return left.card.enabled ? -1 : 1;
+      return left.index - right.index;
+    })
+    .slice(0, COMBOBOX_OPTION_LIMIT)
+    .map((item) => item.card);
+}
+
+function getCombobox(input) {
+  return input ? input.closest(".card-combobox") : null;
+}
+
+function closestFromEvent(event, selector) {
+  return event.target instanceof Element ? event.target.closest(selector) : null;
+}
+
+function getComboInputFromEvent(event) {
+  return closestFromEvent(event, "input");
+}
+
+function getComboMenu(input) {
+  return getCombobox(input)?.querySelector(".combo-menu") || null;
+}
+
+function getComboOptions(input) {
+  return [...(getComboMenu(input)?.querySelectorAll(".combo-option") || [])];
+}
+
+function setComboActive(input, nextIndex) {
+  const combobox = getCombobox(input);
+  const options = getComboOptions(input);
+  if (!combobox || !options.length) return;
+
+  const maxIndex = options.length - 1;
+  const index = Math.max(0, Math.min(nextIndex, maxIndex));
+  combobox.dataset.activeIndex = String(index);
+  options.forEach((option, optionIndex) => {
+    option.setAttribute("aria-selected", String(optionIndex === index));
+  });
+  options[index].scrollIntoView({ block: "nearest" });
+}
+
+function closeCombobox(input) {
+  const combobox = getCombobox(input);
+  if (!combobox) return;
+  combobox.classList.remove("open");
+  combobox.dataset.activeIndex = "-1";
+  const menu = combobox.querySelector(".combo-menu");
+  if (menu) menu.replaceChildren();
+  const textInput = combobox.querySelector("input");
+  if (textInput) textInput.setAttribute("aria-expanded", "false");
+}
+
+function closeOtherComboboxes(currentInput) {
+  document.querySelectorAll(".card-combobox.open").forEach((combobox) => {
+    if (combobox !== getCombobox(currentInput)) {
+      closeCombobox(combobox.querySelector("input"));
+    }
+  });
+}
+
+function renderCombobox(input) {
+  const combobox = getCombobox(input);
+  const menu = getComboMenu(input);
+  if (!combobox || !menu) return;
+
+  closeOtherComboboxes(input);
+  const cards = getCardSuggestions(input.value);
+  const options = cards.map((card, index) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "combo-option";
+    option.dataset.cardName = card.name;
+    option.dataset.index = String(index);
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", "false");
+
+    const name = document.createElement("strong");
+    name.textContent = card.name;
+    const meta = document.createElement("small");
+    meta.textContent = [card.race, card.tier ? `${card.tier}티어` : "", card.source]
+      .filter(Boolean)
+      .join(" · ");
+    option.append(name, meta);
+    return option;
+  });
+
+  menu.replaceChildren(...options);
+  combobox.classList.toggle("open", options.length > 0);
+  combobox.dataset.activeIndex = "-1";
+  input.setAttribute("aria-expanded", String(options.length > 0));
+}
+
+function syncLiveInputs() {
+  state.currentCards = readInputs(el.liveInputs);
+}
+
+function chooseComboCard(input, cardName) {
+  const combobox = getCombobox(input);
+  const mode = combobox?.dataset.comboMode;
+  const result = combobox?.dataset.result;
+  input.value = cardName;
+  closeCombobox(input);
+
+  if (mode === "observation") {
+    addObservation(result, cardName);
+    input.value = "";
+    input.focus();
+    return;
+  }
+
+  syncLiveInputs();
+  renderAll();
+  input.focus();
+}
+
+function handleComboInput(event) {
+  const input = getComboInputFromEvent(event);
+  if (!input || !getCombobox(input)) return;
+  if (event.isComposing) return;
+
+  const combobox = getCombobox(input);
+  const mode = combobox.dataset.comboMode;
+  const exactCard = findCard(input.value);
+
+  if (mode === "observation" && exactCard) {
+    chooseComboCard(input, exactCard.name);
+    return;
+  }
+
+  if (mode === "live") {
+    syncLiveInputs();
+    renderAll();
+  }
+
+  renderCombobox(input);
+}
+
+function handleComboFocus(event) {
+  const input = getComboInputFromEvent(event);
+  if (!input || !getCombobox(input)) return;
+  renderCombobox(input);
+}
+
+function handleComboKeydown(event) {
+  const input = getComboInputFromEvent(event);
+  if (!input || !getCombobox(input)) return;
+
+  const combobox = getCombobox(input);
+  const open = combobox.classList.contains("open");
+  const options = getComboOptions(input);
+  const currentIndex = Number(combobox.dataset.activeIndex || -1);
+
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    if (!open) renderCombobox(input);
+    setComboActive(input, currentIndex < 0 ? 0 : currentIndex + 1);
+    return;
+  }
+
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    if (!open) renderCombobox(input);
+    setComboActive(input, currentIndex < 0 ? options.length - 1 : currentIndex - 1);
+    return;
+  }
+
+  if (event.key === "Enter") {
+    const activeOption = options[currentIndex];
+    const exactCard = findCard(input.value);
+    if (activeOption || exactCard) {
+      event.preventDefault();
+      chooseComboCard(input, activeOption?.dataset.cardName || exactCard.name);
+    }
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeCombobox(input);
+    if (combobox.dataset.comboMode === "observation") input.value = "";
+  }
+}
+
+function handleComboCompositionEnd(event) {
+  const input = getComboInputFromEvent(event);
+  if (!input || !getCombobox(input)) return;
+
+  window.requestAnimationFrame(() => {
+    handleComboInput({ target: input, isComposing: false });
+  });
+}
+
+function handleComboClick(event) {
+  const option = closestFromEvent(event, ".combo-option");
+  if (option) {
+    const input = option.closest(".card-combobox")?.querySelector("input");
+    if (input) chooseComboCard(input, option.dataset.cardName);
+    return;
+  }
+
+  const toggle = closestFromEvent(event, ".combo-toggle");
+  if (toggle) {
+    const input = toggle.closest(".card-combobox")?.querySelector("input");
+    if (!input) return;
+    if (getCombobox(input).classList.contains("open")) {
+      closeCombobox(input);
+    } else {
+      input.focus();
+      renderCombobox(input);
+    }
+  }
+}
+
+function handleComboPointerMove(event) {
+  const option = closestFromEvent(event, ".combo-option");
+  if (!option) return;
+  const input = option.closest(".card-combobox")?.querySelector("input");
+  if (input) setComboActive(input, Number(option.dataset.index));
 }
 
 function getPoolFilters() {
@@ -521,7 +780,6 @@ function renderAll() {
 
   el.candidateFilter.value = state.filter;
   el.candidateSearch.value = state.search;
-  renderDatalist();
   renderInputGrid(el.liveInputs, "liveCard", state.currentCards);
   renderPoolTabs();
   renderCardPoolTable();
@@ -553,61 +811,6 @@ function addObservation(result, cardName) {
   renderAll();
 }
 
-function findCardName(value) {
-  const key = normalizeName(value);
-  if (!key) return "";
-  const card = state.cards.find((item) => item.key === key);
-  return card ? card.name : "";
-}
-
-function commitObservationPicker(input, result, showInvalid) {
-  const rawValue = displayValue(input.value);
-  if (!rawValue) return;
-
-  const cardName = findCardName(rawValue);
-  if (!cardName) {
-    if (showInvalid) {
-      showToast("카드풀에 있는 카드명을 정확히 선택하세요.");
-      input.select();
-    }
-    return;
-  }
-
-  addObservation(result, cardName);
-  input.value = "";
-}
-
-function handleObservationPicker(event, result) {
-  if (event.type === "keydown") {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      commitObservationPicker(event.target, result, true);
-    }
-    if (event.key === "Escape") {
-      event.target.value = "";
-    }
-    return;
-  }
-
-  if (event.type === "input") {
-    if (event.isComposing) return;
-    commitObservationPicker(event.target, result, false);
-    return;
-  }
-
-  if (event.type === "compositionend") {
-    commitObservationPicker(event.target, result, false);
-    return;
-  }
-
-  commitObservationPicker(event.target, result, true);
-}
-
-function updateLiveFromInputs() {
-  state.currentCards = readInputs(el.liveInputs);
-  renderAll();
-}
-
 function copyCandidates() {
   const names = computeCandidates()
     .filter((candidate) => candidate.possible)
@@ -625,15 +828,19 @@ function copyCandidates() {
 }
 
 function bindEvents() {
-  [
-    [el.positiveObservationSelect, "Y"],
-    [el.negativeObservationSelect, "N"],
-  ].forEach(([input, result]) => {
-    input.addEventListener("input", (event) => handleObservationPicker(event, result));
-    input.addEventListener("change", (event) => handleObservationPicker(event, result));
-    input.addEventListener("compositionend", (event) => handleObservationPicker(event, result));
-    input.addEventListener("keydown", (event) => handleObservationPicker(event, result));
+  document.addEventListener("input", handleComboInput);
+  document.addEventListener("change", handleComboInput);
+  document.addEventListener("focusin", handleComboFocus);
+  document.addEventListener("compositionend", handleComboCompositionEnd);
+  document.addEventListener("keydown", handleComboKeydown);
+  document.addEventListener("click", (event) => {
+    handleComboClick(event);
+    if (!closestFromEvent(event, ".card-combobox")) {
+      document.querySelectorAll(".card-combobox.open input").forEach(closeCombobox);
+    }
   });
+  document.addEventListener("pointermove", handleComboPointerMove);
+
   document.getElementById("clearObservationsBtn").addEventListener("click", () => {
     if (!window.confirm("관측값을 모두 지울까요?")) return;
     state.observations = [];
@@ -655,8 +862,6 @@ function bindEvents() {
     };
     renderAll();
   });
-
-  el.liveInputs.addEventListener("input", updateLiveFromInputs);
 
   el.observationBody.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-action]");

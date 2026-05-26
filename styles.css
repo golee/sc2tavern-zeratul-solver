@@ -350,6 +350,120 @@ td {
   background: #18150f;
 }
 
+.card-combobox {
+  position: relative;
+  min-width: 0;
+}
+
+.card-combobox input {
+  padding-right: 34px;
+}
+
+.combo-toggle {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  display: grid;
+  width: 32px;
+  min-width: 32px;
+  height: calc(100% - 2px);
+  min-height: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 0 5px 5px 0;
+  background: linear-gradient(90deg, rgba(18, 20, 18, 0), rgba(18, 20, 18, 0.72));
+  color: var(--muted);
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.86;
+}
+
+.combo-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  opacity: 1;
+}
+
+.card-combobox.open .combo-toggle,
+.card-combobox input:focus + .combo-toggle {
+  color: #d5f9e1;
+  opacity: 1;
+}
+
+.combo-toggle:active {
+  transform: none;
+}
+
+.combo-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 20;
+  display: none;
+  max-height: 252px;
+  overflow: auto;
+  border: 1px solid rgba(117, 138, 111, 0.64);
+  border-radius: 6px;
+  background: #101510;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
+  padding: 5px;
+}
+
+.card-combobox.open .combo-menu {
+  display: grid;
+  gap: 2px;
+}
+
+.combo-option {
+  display: grid;
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  padding: 5px 8px;
+  text-align: left;
+}
+
+.combo-option:hover,
+.combo-option[aria-selected="true"] {
+  background: rgba(70, 96, 70, 0.42);
+}
+
+.combo-option:active {
+  transform: none;
+}
+
+.combo-option strong {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-option small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.observation-picker.positive .combo-menu {
+  border-color: rgba(47, 140, 98, 0.78);
+}
+
+.observation-picker.negative .combo-menu {
+  border-color: rgba(140, 107, 51, 0.78);
+}
+
 .card-input-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
@@ -357,7 +471,8 @@ td {
   min-width: 0;
 }
 
-.card-input-grid input {
+.card-input-grid input,
+.card-input-grid .card-combobox {
   min-width: 0;
 }
 

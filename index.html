@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>제라툴 영능 추론기</title>
-    <link rel="stylesheet" href="styles.css?v=4">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css?v=6">
   </head>
   <body>
     <main class="app-shell">
@@ -62,11 +63,19 @@
           <div class="observation-picker-grid">
             <label class="observation-picker positive">
               <span>Y 선택</span>
-              <input id="positiveObservationSelect" type="text" list="cardOptions" autocomplete="off" placeholder="카드명 입력/선택" aria-label="Y 카드명 입력 또는 선택">
+              <div class="card-combobox" data-combo-mode="observation" data-result="Y">
+                <input id="positiveObservationSelect" type="text" autocomplete="off" spellcheck="false" placeholder="카드명 입력/선택" aria-label="Y 카드명 입력 또는 선택" aria-autocomplete="list" aria-expanded="false">
+                <button type="button" class="combo-toggle" tabindex="-1" aria-label="카드 목록 열기">▾</button>
+                <div class="combo-menu" role="listbox"></div>
+              </div>
             </label>
             <label class="observation-picker negative">
               <span>N 선택</span>
-              <input id="negativeObservationSelect" type="text" list="cardOptions" autocomplete="off" placeholder="카드명 입력/선택" aria-label="N 카드명 입력 또는 선택">
+              <div class="card-combobox" data-combo-mode="observation" data-result="N">
+                <input id="negativeObservationSelect" type="text" autocomplete="off" spellcheck="false" placeholder="카드명 입력/선택" aria-label="N 카드명 입력 또는 선택" aria-autocomplete="list" aria-expanded="false">
+                <button type="button" class="combo-toggle" tabindex="-1" aria-label="카드 목록 열기">▾</button>
+                <div class="combo-menu" role="listbox"></div>
+              </div>
             </label>
           </div>
           <div class="table-frame observation-table">
@@ -179,9 +188,8 @@
       </footer>
     </main>
 
-    <datalist id="cardOptions"></datalist>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="cardpool-data.js"></script>
-    <script src="app.js"></script>
+    <script src="cardpool-data.js?v=2"></script>
+    <script src="app.js?v=3"></script>
   </body>
 </html>
