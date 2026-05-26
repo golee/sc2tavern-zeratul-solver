@@ -3,6 +3,13 @@
 const MAX_OBSERVATION_CARDS = 10;
 const MAX_OBSERVATIONS = 30;
 const CLOSE_VALUE_THRESHOLD = 200;
+const BASE_POOL_FILTERS = [
+  { type: "all", value: "전체", label: "전체" },
+  { type: "race", value: "프로토스", label: "프로토스" },
+  { type: "race", value: "테란", label: "테란" },
+  { type: "race", value: "저그", label: "저그" },
+  { type: "race", value: "중립", label: "중립" },
+];
 
 const defaultPoolText = (typeof window.ZERATUL_DEFAULT_CARD_POOL === "string" && window.ZERATUL_DEFAULT_CARD_POOL.trim())
   ? window.ZERATUL_DEFAULT_CARD_POOL.trim()
@@ -12,11 +19,13 @@ const state = {
   cards: [],
   observations: [],
   currentCards: Array(MAX_OBSERVATION_CARDS).fill(""),
+  poolFilter: { type: "all", value: "전체" },
   filter: "possible",
   search: "",
 };
 
 const el = {
+  poolTabs: document.getElementById("poolTabs"),
   poolTableBody: document.getElementById("poolTableBody"),
   positiveObservationSelect: document.getElementById("positiveObservationSelect"),
   negativeObservationSelect: document.getElementById("negativeObservationSelect"),
@@ -27,10 +36,11 @@ const el = {
   candidateSearch: document.getElementById("candidateSearch"),
   candidateFilter: document.getElementById("candidateFilter"),
   cardOptions: document.getElementById("cardOptions"),
-  metricCardPool: document.getElementById("metricCardPool"),
-  metricObservations: document.getElementById("metricObservations"),
-  metricPossible: document.getElementById("metricPossible"),
-  metricSeen: document.getElementById("metricSeen"),
+  observationCount: document.getElementById("observationCount"),
+  candidateCount: document.getElementById("candidateCount"),
+  conditionRaces: document.getElementById("conditionRaces"),
+  conditionValueRange: document.getElementById("conditionValueRange"),
+  conditionUnitRange: document.getElementById("conditionUnitRange"),
   toast: document.getElementById("toast"),
 };
 
@@ -93,6 +103,11 @@ function parseMemoNumber(memo, label) {
   return Number(match[1]);
 }
 
+function parseMemoText(memo, label) {
+  const match = String(memo || "").match(new RegExp(`${label}\\s*:\\s*([^;]+)`));
+  return match ? displayValue(match[1]) : "";
+}
+
 function parseCardPool(text) {
   const seen = new Set();
   const cards = [];
@@ -117,6 +132,7 @@ function parseCardPool(text) {
       tier: displayValue(cells[2]),
       enabled: parseEnabled(cells[3]),
       memo,
+      source: parseMemoText(memo, "출처"),
       number: parseMemoNumber(memo, "유닛"),
       value: parseMemoNumber(memo, "가치"),
     });
@@ -226,6 +242,20 @@ function makeTag(text, type) {
   return span;
 }
 
+function formatNumber(value) {
+  return Number.isFinite(value) ? value.toLocaleString("ko-KR") : "-";
+}
+
+function formatRange(values) {
+  const finiteValues = values.filter(Number.isFinite);
+  if (!finiteValues.length) return "-";
+
+  const min = Math.min(...finiteValues);
+  const max = Math.max(...finiteValues);
+  if (min === max) return formatNumber(min);
+  return `${formatNumber(min)} ~ ${formatNumber(max)}`;
+}
+
 function setEmptyRow(tbody, colSpan, message) {
   tbody.replaceChildren();
   const tr = document.createElement("tr");
@@ -283,13 +313,57 @@ function readInputs(container) {
   return [...container.querySelectorAll("input")].map((input) => input.value);
 }
 
+function getPoolFilters() {
+  const expansionSources = [...new Set(state.cards
+    .map((card) => card.source)
+    .filter((source) => source && source !== "핵심"))]
+    .sort((a, b) => a.localeCompare(b, "ko"))
+    .map((source) => ({ type: "source", value: source, label: source }));
+
+  return [...BASE_POOL_FILTERS, ...expansionSources];
+}
+
+function isActivePoolFilter(filter) {
+  return state.poolFilter.type === filter.type && state.poolFilter.value === filter.value;
+}
+
+function matchesPoolFilter(card) {
+  if (state.poolFilter.type === "all") return true;
+  if (state.poolFilter.type === "race") return card.race === state.poolFilter.value;
+  if (state.poolFilter.type === "source") return card.source === state.poolFilter.value;
+  return true;
+}
+
+function renderPoolTabs() {
+  const tabs = getPoolFilters().map((filter) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "pool-tab";
+    button.textContent = filter.label;
+    button.dataset.filterType = filter.type;
+    button.dataset.filterValue = filter.value;
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", String(isActivePoolFilter(filter)));
+    button.setAttribute("aria-pressed", String(isActivePoolFilter(filter)));
+    return button;
+  });
+
+  el.poolTabs.replaceChildren(...tabs);
+}
+
 function renderCardPoolTable() {
   if (!state.cards.length) {
     setEmptyRow(el.poolTableBody, 5, "카드풀이 비어 있습니다.");
     return;
   }
 
-  const rows = state.cards.map((card) => {
+  const filteredCards = state.cards.filter(matchesPoolFilter);
+  if (!filteredCards.length) {
+    setEmptyRow(el.poolTableBody, 5, "표시할 카드가 없습니다.");
+    return;
+  }
+
+  const rows = filteredCards.map((card) => {
     const tr = document.createElement("tr");
     tr.append(
       makeCell(card.name),
@@ -425,13 +499,20 @@ function renderCandidates(candidates) {
   el.candidateBody.replaceChildren(...rows);
 }
 
-function renderMetrics(candidates) {
+function renderSectionCounts(candidates) {
   const possible = candidates.filter((candidate) => candidate.possible);
-  const seenPossible = possible.filter((candidate) => candidate.seenNow);
-  el.metricCardPool.textContent = String(state.cards.length);
-  el.metricObservations.textContent = String(state.observations.length);
-  el.metricPossible.textContent = String(possible.length);
-  el.metricSeen.textContent = String(seenPossible.length);
+  el.observationCount.textContent = String(state.observations.length);
+  el.candidateCount.textContent = String(possible.length);
+}
+
+function renderConditionSummary(candidates) {
+  const possible = candidates.filter((candidate) => candidate.possible);
+  const races = [...new Set(possible.map((candidate) => candidate.race).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "ko"));
+
+  el.conditionRaces.textContent = races.length ? races.join(", ") : "-";
+  el.conditionValueRange.textContent = formatRange(possible.map((candidate) => candidate.value));
+  el.conditionUnitRange.textContent = formatRange(possible.map((candidate) => candidate.number));
 }
 
 function renderAll() {
@@ -442,11 +523,13 @@ function renderAll() {
   el.candidateSearch.value = state.search;
   renderDatalist();
   renderInputGrid(el.liveInputs, "liveCard", state.currentCards);
+  renderPoolTabs();
   renderCardPoolTable();
   renderObservations();
   renderLive(candidates);
   renderCandidates(candidates);
-  renderMetrics(candidates);
+  renderSectionCounts(candidates);
+  renderConditionSummary(candidates);
 }
 
 function addObservation(result, cardName) {
@@ -561,6 +644,17 @@ function bindEvents() {
     renderAll();
   });
   document.getElementById("copyCandidatesBtn").addEventListener("click", copyCandidates);
+
+  el.poolTabs.addEventListener("click", (event) => {
+    const button = event.target.closest(".pool-tab");
+    if (!button) return;
+
+    state.poolFilter = {
+      type: button.dataset.filterType,
+      value: button.dataset.filterValue,
+    };
+    renderAll();
+  });
 
   el.liveInputs.addEventListener("input", updateLiveFromInputs);
 

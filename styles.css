@@ -183,36 +183,6 @@ td {
   gap: 8px;
 }
 
-.metric-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
-  gap: 1px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--line);
-  box-shadow: var(--shadow);
-}
-
-.metric-strip div {
-  min-height: 78px;
-  padding: 15px 16px;
-  background: #1f241f;
-}
-
-.metric-strip span {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.metric-strip strong {
-  display: block;
-  margin-top: 7px;
-  font-size: 28px;
-  line-height: 1;
-}
-
 .workspace-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -232,7 +202,8 @@ td {
 .pool-panel,
 .observation-panel,
 .live-panel,
-.candidates-panel {
+.candidates-panel,
+.conditions-panel {
   padding: 14px;
 }
 
@@ -248,8 +219,12 @@ td {
   order: 3;
 }
 
-.pool-panel {
+.conditions-panel {
   order: 4;
+}
+
+.pool-panel {
+  order: 5;
 }
 
 .panel-header {
@@ -261,9 +236,28 @@ td {
 }
 
 .panel-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   font-size: 18px;
   line-height: 1.2;
+}
+
+.section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 22px;
+  border: 1px solid #4c5948;
+  border-radius: 999px;
+  background: #171c17;
+  color: #dfe7d9;
+  padding: 2px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .table-frame {
@@ -276,6 +270,29 @@ td {
 
 .pool-table {
   max-height: 420px;
+}
+
+.pool-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.pool-tab {
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 5px 11px;
+  color: #d7dfd1;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.pool-tab[aria-selected="true"] {
+  border-color: var(--green);
+  background: var(--green-2);
+  color: #c9ffe5;
 }
 
 .pool-table th:nth-child(1),
@@ -382,6 +399,35 @@ td {
 
 .observation-card-cell {
   color: #f5f8ee;
+}
+
+.condition-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.condition-item {
+  min-width: 0;
+  border: 1px solid #3d463a;
+  border-radius: 6px;
+  background: #181c18;
+  padding: 10px 12px;
+}
+
+.condition-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.condition-item strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .tag {
@@ -524,6 +570,10 @@ td {
   .card-input-grid {
     grid-template-columns: repeat(3, minmax(120px, 1fr));
   }
+
+  .condition-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -549,10 +599,6 @@ td {
   .top-actions > *,
   .button-row > * {
     flex: 1 1 auto;
-  }
-
-  .metric-strip {
-    grid-template-columns: repeat(2, minmax(120px, 1fr));
   }
 
   .card-input-grid {

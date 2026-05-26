@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>제라툴 영능 추론기</title>
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=4">
   </head>
   <body>
     <main class="app-shell">
@@ -24,25 +24,6 @@
         </div>
       </header>
 
-      <section class="metric-strip" aria-label="현재 추론 상태">
-        <div>
-          <span>카드풀</span>
-          <strong id="metricCardPool">0</strong>
-        </div>
-        <div>
-          <span>관측</span>
-          <strong id="metricObservations">0</strong>
-        </div>
-        <div>
-          <span>남은 후보</span>
-          <strong id="metricPossible">0</strong>
-        </div>
-        <div>
-          <span>현재 보임</span>
-          <strong id="metricSeen">0</strong>
-        </div>
-      </section>
-
       <section class="workspace-grid">
         <section class="panel pool-panel" aria-labelledby="poolTitle">
           <div class="panel-header">
@@ -51,6 +32,7 @@
               <p>예언 후보와 상점에서 볼 수 있는 카드 목록입니다.</p>
             </div>
           </div>
+          <div class="pool-tabs" id="poolTabs" role="tablist" aria-label="카드풀 필터"></div>
           <div class="table-frame pool-table">
             <table>
               <thead>
@@ -70,7 +52,7 @@
         <section class="panel observation-panel" aria-labelledby="observationTitle">
           <div class="panel-header">
             <div>
-              <h2 id="observationTitle">관측 입력</h2>
+              <h2 id="observationTitle">관측 입력 <span class="section-count" id="observationCount">0</span></h2>
               <p>종족, 유닛 수, 가치 200 이내 중 하나라도 맞으면 Y로 계산합니다.</p>
             </div>
             <div class="button-row">
@@ -132,7 +114,7 @@
         <section class="panel candidates-panel" aria-labelledby="candidatesTitle">
           <div class="panel-header">
             <div>
-              <h2 id="candidatesTitle">후보 목록</h2>
+              <h2 id="candidatesTitle">후보 목록 <span class="section-count" id="candidateCount">0</span></h2>
               <p>지금까지의 관측과 맞는 예언 후보만 남겨 보여줍니다.</p>
             </div>
             <div class="filters">
@@ -160,6 +142,29 @@
               </thead>
               <tbody id="candidateBody"></tbody>
             </table>
+          </div>
+        </section>
+
+        <section class="panel conditions-panel" aria-labelledby="conditionsTitle">
+          <div class="panel-header">
+            <div>
+              <h2 id="conditionsTitle">조건 요약</h2>
+              <p>남은 후보가 가질 수 있는 현재 범위입니다.</p>
+            </div>
+          </div>
+          <div class="condition-grid">
+            <div class="condition-item">
+              <span>종족</span>
+              <strong id="conditionRaces">-</strong>
+            </div>
+            <div class="condition-item">
+              <span>투력 범위</span>
+              <strong id="conditionValueRange">-</strong>
+            </div>
+            <div class="condition-item">
+              <span>유닛 수 범위</span>
+              <strong id="conditionUnitRange">-</strong>
+            </div>
           </div>
         </section>
       </section>
