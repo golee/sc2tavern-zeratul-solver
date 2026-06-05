@@ -136,6 +136,14 @@ window.ZERATUL_DEFAULT_CARD_POOL = String.raw`
 천국의 악마들	테란	5	N	출처:일란성 쌍둥이; 유닛:4; 가치:1550
 신경 기생충	저그	5	N	출처:일란성 쌍둥이; 유닛:2; 가치:800
 정화자 프로토콜	프로토스	6	N	출처:일란성 쌍둥이; 유닛:10; 가치:2000
+넋 잃는 자둬바오	저그	6	N	출처:대회 우승자; 유닛:23; 가치:4200
+두유와 튀김빵	중립	6	N	출처:대회 우승자; 유닛:1; 가치:1000
+두유와 튀김빵 KT1	중립	6	N	출처:대회 우승자; 유닛:1; 가치:1000
+나는 샤오밍	중립	6	N	출처:대회 우승자; 유닛:20; 가치:800
+cloudplayer	테란	6	N	출처:대회 우승자; 유닛:3; 가치:1825
+선술집 병참처	프로토스	6	N	출처:대회 우승자; 유닛:3; 가치:2400
+드디어 올 것이 왔군	테란	6	N	출처:대회 우승자; 유닛:1; 가치:150
+스완 함대	테란	6	N	출처:대회 우승자; 유닛:11; 가치:4200
 `;
 
 window.ZERATUL_CARD_NAME_REVIEW_LIST = [
@@ -151,7 +159,7 @@ window.ZERATUL_CARD_POOL_SOURCE = {
   url: "https://gameindustryremnant.github.io/SCTavernVoidSeekerPublic/",
   koreanReferenceUrl: "https://namu.moe/w/%EC%8A%A4%ED%83%80%20%EC%84%A0%EC%88%A0%EC%A7%91%20%EC%A0%84%ED%88%AC/%EC%B9%B4%EB%93%9C",
   rawDataUrl: "https://github.com/gameindustryremnant/SCTavernVoidSeekerPublic/tree/main/data",
-  lastChecked: "2026-05-26",
+  lastChecked: "2026-06-06",
   upstreamUpdated: "2026-05-06",
-  note: "Korean-only card pool. Core cards are enabled as candidates; visible expansion pack cards are included as disabled autocomplete/observation cards.",
+  note: "Korean-only card pool. Core cards are enabled as candidates; expansion and low-probability special cards are included as disabled autocomplete/observation cards.",
 };
