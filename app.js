@@ -5,6 +5,7 @@ const MAX_OBSERVATION_CARDS = 10;
 const MAX_OBSERVATIONS = 30;
 const CLOSE_VALUE_THRESHOLD = 200;
 const OBSERVATIONS_STORAGE_KEY = "zeratulResolver.observations.v1";
+const FAILED_CANDIDATES_STORAGE_KEY = "zeratulResolver.failedCandidates.v1";
 const BASE_POOL_FILTERS = [
   { type: "all", value: "전체", label: "전체" },
   { type: "race", value: "프로토스", label: "프로토스" },
@@ -21,6 +22,7 @@ const state = {
   cards: [],
   observations: [],
   currentCards: Array(MAX_OBSERVATION_CARDS).fill(""),
+  failedCandidateKeys: new Set(),
   poolFilter: { type: "all", value: "전체" },
   filter: "possible",
   search: "",
@@ -234,6 +236,35 @@ function saveSessionObservations() {
   }
 }
 
+function normalizeStoredCandidateKeys(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map(normalizeName).filter(Boolean))];
+}
+
+function loadSessionFailedCandidates() {
+  try {
+    const stored = window.sessionStorage.getItem(FAILED_CANDIDATES_STORAGE_KEY);
+    if (!stored) return;
+    state.failedCandidateKeys = new Set(normalizeStoredCandidateKeys(JSON.parse(stored)));
+  } catch {
+    state.failedCandidateKeys = new Set();
+  }
+}
+
+function saveSessionFailedCandidates() {
+  try {
+    const keys = [...state.failedCandidateKeys];
+    if (!keys.length) {
+      window.sessionStorage.removeItem(FAILED_CANDIDATES_STORAGE_KEY);
+      return;
+    }
+
+    window.sessionStorage.setItem(FAILED_CANDIDATES_STORAGE_KEY, JSON.stringify(keys));
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+}
+
 function computeCandidates() {
   const cardByKey = new Map(state.cards.map((card) => [card.key, card]));
   const activeObservations = state.observations
@@ -270,13 +301,21 @@ function computeCandidates() {
       }
     });
 
+    const manuallyFailed = state.failedCandidateKeys.has(card.key);
     const possible = card.enabled && contradictions.length === 0;
     const seenNow = liveSet.has(card.key);
-    const action = !possible ? "제외" : seenNow ? "현재 보이면 우선 확인" : "후보 유지";
+    const action = manuallyFailed
+      ? "예언 실패"
+      : !possible
+        ? "제외"
+        : seenNow
+          ? "현재 보이면 우선 확인"
+          : "후보 유지";
 
     return {
       ...card,
       possible,
+      manuallyFailed,
       seenNow,
       contradictions: contradictions.length,
       contradictionRefs: contradictions,
@@ -861,7 +900,11 @@ function renderLive(candidates) {
     tr.append(
       possibleCell,
       makeCell(String(candidate.contradictions)),
-      makeCell(candidate.possible ? "정답 후보. 우선 확인/구매 후보" : "현재 정보상 제외")
+      makeCell(candidate.manuallyFailed
+        ? "예언 실패 표시됨"
+        : candidate.possible
+          ? "정답 후보. 우선 확인/구매 후보"
+          : "현재 정보상 제외")
     );
     return tr;
   });
@@ -872,6 +915,7 @@ function renderLive(candidates) {
 function sortedCandidates(candidates) {
   return [...candidates].sort((a, b) => {
     if (a.possible !== b.possible) return a.possible ? -1 : 1;
+    if (a.manuallyFailed !== b.manuallyFailed) return a.manuallyFailed ? 1 : -1;
     if (a.seenNow !== b.seenNow) return a.seenNow ? -1 : 1;
     if (a.contradictions !== b.contradictions) return a.contradictions - b.contradictions;
     if (a.positiveHits !== b.positiveHits) return b.positiveHits - a.positiveHits;
@@ -911,7 +955,36 @@ function renderCandidates(candidates) {
 
     const seenCell = document.createElement("td");
     seenCell.append(makeTag(candidate.seenNow ? "YES" : "-", candidate.seenNow ? "yes" : "neutral"));
-    tr.append(seenCell, makeCell(candidate.action));
+    tr.append(seenCell);
+
+    const actionCell = document.createElement("td");
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+
+    if (candidate.manuallyFailed) {
+      const label = document.createElement("span");
+      label.className = "candidate-action-label";
+      label.textContent = "예언 실패";
+      const restoreButton = document.createElement("button");
+      restoreButton.type = "button";
+      restoreButton.textContent = "복구";
+      restoreButton.dataset.action = "restore-candidate";
+      restoreButton.dataset.cardKey = candidate.key;
+      actions.append(label, restoreButton);
+    } else if (candidate.possible) {
+      const failButton = document.createElement("button");
+      failButton.type = "button";
+      failButton.textContent = "실패";
+      failButton.className = "danger";
+      failButton.dataset.action = "fail-candidate";
+      failButton.dataset.cardKey = candidate.key;
+      actions.append(failButton);
+    } else {
+      actions.textContent = candidate.action;
+    }
+
+    actionCell.append(actions);
+    tr.append(actionCell);
     return tr;
   });
 
@@ -1041,6 +1114,26 @@ function bindEvents() {
     }
   });
 
+  el.candidateBody.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+
+    if (button.dataset.action === "fail-candidate") {
+      state.failedCandidateKeys.add(normalizeName(button.dataset.cardKey));
+      saveSessionFailedCandidates();
+      showToast("예언 실패로 표시했습니다.");
+      renderAll();
+      return;
+    }
+
+    if (button.dataset.action === "restore-candidate") {
+      state.failedCandidateKeys.delete(normalizeName(button.dataset.cardKey));
+      saveSessionFailedCandidates();
+      showToast("예언 실패 표시를 해제했습니다.");
+      renderAll();
+    }
+  });
+
   el.candidateFilter.addEventListener("change", () => {
     state.filter = el.candidateFilter.value;
     renderAll();
@@ -1052,5 +1145,6 @@ function bindEvents() {
 }
 
 loadSessionObservations();
+loadSessionFailedCandidates();
 bindEvents();
 renderAll();

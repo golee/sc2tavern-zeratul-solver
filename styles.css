@@ -588,6 +588,14 @@ td {
   font-size: 12px;
 }
 
+.candidate-action-label {
+  align-self: center;
+  color: #ffd5d0;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .filters {
   min-width: min(420px, 100%);
 }
@@ -616,10 +624,18 @@ td {
 .candidates-table th:nth-child(4),
 .candidates-table td:nth-child(4),
 .candidates-table th:nth-child(5),
-.candidates-table td:nth-child(5),
+.candidates-table td:nth-child(5) {
+  width: 68px;
+}
+
 .candidates-table th:nth-child(6),
 .candidates-table td:nth-child(6) {
-  width: 86px;
+  width: 64px;
+}
+
+.candidates-table th:nth-child(7),
+.candidates-table td:nth-child(7) {
+  width: 136px;
 }
 
 .empty-row td {
@@ -797,7 +813,7 @@ td {
   }
 
   .candidates-table table {
-    min-width: 760px;
+    min-width: 720px;
   }
 
   .candidates-table th:nth-child(1),
@@ -809,6 +825,6 @@ td {
 
   .candidates-table th:nth-child(7),
   .candidates-table td:nth-child(7) {
-    width: 150px;
+    width: 156px;
   }
 }
