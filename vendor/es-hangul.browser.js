@@ -1434,3 +1434,10 @@ var EsHangul = (() => {
   }
   return __toCommonJS(es_hangul_exports);
 })();
+
+export const { disassemble, getChoseong } = EsHangul;
+export default EsHangul;
+
+if (typeof window !== "undefined") {
+  window.EsHangul = EsHangul;
+}

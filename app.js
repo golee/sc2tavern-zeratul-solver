@@ -1,9 +1,18 @@
-"use strict";
+import {
+  computeCandidates as computeCandidatesCore,
+  formatDiscreteValues,
+  formatIntegerSegments,
+  getCleanCards,
+  normalizeName,
+  normalizeStoredCandidateKeys,
+  normalizeStoredObservations,
+  parseCardPool,
+} from "./src/resolver.js";
+import { ZERATUL_DEFAULT_CARD_POOL } from "./cardpool-data.js";
+import { disassemble, getChoseong } from "./vendor/es-hangul.browser.js";
 
-const { disassemble, getChoseong } = window.EsHangul;
 const MAX_OBSERVATION_CARDS = 10;
 const MAX_OBSERVATIONS = 30;
-const CLOSE_VALUE_THRESHOLD = 200;
 const OBSERVATIONS_STORAGE_KEY = "zeratulResolver.observations.v1";
 const FAILED_CANDIDATES_STORAGE_KEY = "zeratulResolver.failedCandidates.v1";
 const BASE_POOL_FILTERS = [
@@ -14,8 +23,8 @@ const BASE_POOL_FILTERS = [
   { type: "race", value: "중립", label: "중립" },
 ];
 
-const defaultPoolText = (typeof window.ZERATUL_DEFAULT_CARD_POOL === "string" && window.ZERATUL_DEFAULT_CARD_POOL.trim())
-  ? window.ZERATUL_DEFAULT_CARD_POOL.trim()
+const defaultPoolText = (typeof ZERATUL_DEFAULT_CARD_POOL === "string" && ZERATUL_DEFAULT_CARD_POOL.trim())
+  ? ZERATUL_DEFAULT_CARD_POOL.trim()
   : "카드명\t종족/타입\t티어\t사용 여부\t메모";
 
 const state = {
@@ -49,14 +58,6 @@ const el = {
   toast: document.getElementById("toast"),
 };
 
-function normalizeName(value) {
-  return String(value || "")
-    .normalize("NFKC")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLowerCase();
-}
-
 function normalizeSearchText(value) {
   return String(value || "")
     .trim()
@@ -68,153 +69,11 @@ function compactSearchText(value) {
   return normalizeSearchText(value).replace(/\s+/g, "");
 }
 
-function displayValue(value) {
-  return String(value || "").trim();
-}
-
-function parseDelimitedLine(line) {
-  if (line.includes("\t")) {
-    return line.split("\t").map((part) => part.trim());
-  }
-
-  const cells = [];
-  let cell = "";
-  let quoted = false;
-
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    const next = line[index + 1];
-
-    if (char === '"' && quoted && next === '"') {
-      cell += '"';
-      index += 1;
-    } else if (char === '"') {
-      quoted = !quoted;
-    } else if (char === "," && !quoted) {
-      cells.push(cell.trim());
-      cell = "";
-    } else {
-      cell += char;
-    }
-  }
-
-  cells.push(cell.trim());
-  return cells;
-}
-
-function isHeaderRow(name) {
-  const normalized = normalizeName(name);
-  return ["card", "카드", "카드명", "name"].includes(normalized);
-}
-
-function parseEnabled(value) {
-  const normalized = normalizeName(value);
-  if (!normalized) return true;
-  return !["n", "no", "false", "0", "x", "off", "비활성", "사용안함", "아니오"].includes(normalized);
-}
-
-function parseMemoNumber(memo, label) {
-  const match = String(memo || "").match(new RegExp(`${label}\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`));
-  if (!match) return NaN;
-  return Number(match[1]);
-}
-
-function parseMemoText(memo, label) {
-  const match = String(memo || "").match(new RegExp(`${label}\\s*:\\s*([^;]+)`));
-  return match ? displayValue(match[1]) : "";
-}
-
-function parseCardPool(text) {
-  const seen = new Set();
-  const cards = [];
-
-  text.split(/\r?\n/).forEach((line) => {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) return;
-
-    const cells = parseDelimitedLine(trimmed);
-    const name = displayValue(cells[0]);
-    if (!name || isHeaderRow(name)) return;
-
-    const key = normalizeName(name);
-    if (seen.has(key)) return;
-    seen.add(key);
-    const memo = displayValue(cells[4]);
-
-    cards.push({
-      name,
-      key,
-      race: displayValue(cells[1]),
-      tier: displayValue(cells[2]),
-      enabled: parseEnabled(cells[3]),
-      memo,
-      source: parseMemoText(memo, "출처"),
-      number: parseMemoNumber(memo, "유닛"),
-      value: parseMemoNumber(memo, "가치"),
-    });
-  });
-
-  return cards;
-}
-
-function sameValue(left, right) {
-  const leftValue = displayValue(left);
-  const rightValue = displayValue(right);
-  return leftValue && rightValue && normalizeName(leftValue) === normalizeName(rightValue);
-}
-
-function bothFinite(left, right) {
-  return Number.isFinite(left) && Number.isFinite(right);
-}
-
-function isCloseCard(picked, candidate) {
-  if (!picked || !candidate) return false;
-  if (picked.key === candidate.key) return true;
-  if (sameValue(picked.race, candidate.race)) return true;
-  if (bothFinite(picked.number, candidate.number) && picked.number === candidate.number) return true;
-  return bothFinite(picked.value, candidate.value)
-    && Math.abs(picked.value - candidate.value) <= CLOSE_VALUE_THRESHOLD;
-}
-
-function getCleanCards(values) {
-  const seen = new Set();
-  const result = [];
-
-  values.forEach((value) => {
-    const name = displayValue(value);
-    const key = normalizeName(name);
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    result.push(name);
-  });
-
-  return result;
-}
-
-function normalizeStoredObservations(value) {
-  if (!Array.isArray(value)) return [];
-
-  return value
-    .map((item) => {
-      const result = item?.result;
-      const cards = getCleanCards(Array.isArray(item?.cards) ? item.cards : []);
-      if (!["Y", "N"].includes(result) || !cards.length) return null;
-
-      return { result, cards };
-    })
-    .filter(Boolean)
-    .slice(0, MAX_OBSERVATIONS)
-    .map((observation, index) => ({
-      id: index + 1,
-      ...observation,
-    }));
-}
-
 function loadSessionObservations() {
   try {
     const stored = window.sessionStorage.getItem(OBSERVATIONS_STORAGE_KEY);
     if (!stored) return;
-    state.observations = normalizeStoredObservations(JSON.parse(stored));
+    state.observations = normalizeStoredObservations(JSON.parse(stored), MAX_OBSERVATIONS);
   } catch {
     state.observations = [];
   }
@@ -234,11 +93,6 @@ function saveSessionObservations() {
   } catch {
     // Storage can be unavailable in private or restricted browser contexts.
   }
-}
-
-function normalizeStoredCandidateKeys(value) {
-  if (!Array.isArray(value)) return [];
-  return [...new Set(value.map(normalizeName).filter(Boolean))];
 }
 
 function loadSessionFailedCandidates() {
@@ -266,63 +120,10 @@ function saveSessionFailedCandidates() {
 }
 
 function computeCandidates() {
-  const cardByKey = new Map(state.cards.map((card) => [card.key, card]));
-  const activeObservations = state.observations
-    .filter((observation) => ["Y", "N"].includes(observation.result))
-    .map((observation) => ({
-      ...observation,
-      pickedCards: observation.cards
-        .map((cardName) => cardByKey.get(normalizeName(cardName)))
-        .filter(Boolean),
-    }));
-  const liveSet = new Set(getCleanCards(state.currentCards).map(normalizeName));
-
-  return state.cards.map((card) => {
-    const contradictions = [];
-    let positiveHits = 0;
-    let negativeBlocks = 0;
-
-    activeObservations.forEach((observation) => {
-      const close = observation.pickedCards.some((picked) => isCloseCard(picked, card));
-      if (observation.result === "Y") {
-        if (close) {
-          positiveHits += 1;
-        } else {
-          contradictions.push(`#${observation.id} Y`);
-        }
-      }
-
-      if (observation.result === "N") {
-        if (close) {
-          contradictions.push(`#${observation.id} N`);
-        } else {
-          negativeBlocks += 1;
-        }
-      }
-    });
-
-    const manuallyFailed = state.failedCandidateKeys.has(card.key);
-    const possible = card.enabled && contradictions.length === 0;
-    const seenNow = liveSet.has(card.key);
-    const action = manuallyFailed
-      ? "예언 실패"
-      : !possible
-        ? "제외"
-        : seenNow
-          ? "현재 보이면 우선 확인"
-          : "후보 유지";
-
-    return {
-      ...card,
-      possible,
-      manuallyFailed,
-      seenNow,
-      contradictions: contradictions.length,
-      contradictionRefs: contradictions,
-      positiveHits,
-      negativeBlocks,
-      action,
-    };
+  return computeCandidatesCore(state.cards, {
+    observations: state.observations,
+    currentCards: state.currentCards,
+    failedCandidateKeys: state.failedCandidateKeys,
   });
 }
 
@@ -338,50 +139,6 @@ function makeTag(text, type) {
   span.className = `tag ${type}`;
   span.textContent = text;
   return span;
-}
-
-function formatNumber(value) {
-  return Number.isFinite(value) ? value.toLocaleString("ko-KR") : "-";
-}
-
-function getUniqueFiniteValues(values) {
-  return [...new Set(values.filter(Number.isFinite))]
-    .sort((left, right) => left - right);
-}
-
-function formatDiscreteValues(values) {
-  const uniqueValues = getUniqueFiniteValues(values);
-  if (!uniqueValues.length) return "-";
-  return uniqueValues.map(formatNumber).join(", ");
-}
-
-function formatIntegerSegments(values) {
-  const uniqueValues = getUniqueFiniteValues(values);
-  if (!uniqueValues.length) return "-";
-
-  const segments = [];
-  let start = uniqueValues[0];
-  let end = uniqueValues[0];
-
-  uniqueValues.slice(1).forEach((value) => {
-    if (Number.isInteger(value) && Number.isInteger(end) && value === end + 1) {
-      end = value;
-      return;
-    }
-
-    segments.push([start, end]);
-    start = value;
-    end = value;
-  });
-  segments.push([start, end]);
-
-  return segments
-    .map(([segmentStart, segmentEnd]) => (
-      segmentStart === segmentEnd
-        ? formatNumber(segmentStart)
-        : `${formatNumber(segmentStart)}~${formatNumber(segmentEnd)}`
-    ))
-    .join(", ");
 }
 
 function setConditionText(element, text) {

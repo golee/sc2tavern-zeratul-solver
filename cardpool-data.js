@@ -1,6 +1,4 @@
-"use strict";
-
-window.ZERATUL_DEFAULT_CARD_POOL = String.raw`
+export const ZERATUL_DEFAULT_CARD_POOL = String.raw`
 카드명	종족/타입	티어	사용 여부	메모
 지원군 소환	프로토스	1	Y	출처:핵심; 유닛:4; 가치:550
 동력원	프로토스	1	Y	출처:핵심; 유닛:6; 가치:600
@@ -146,7 +144,7 @@ cloudplayer	테란	6	N	출처:대회 우승자; 유닛:3; 가치:1825
 스완 함대	테란	6	N	출처:대회 우승자; 유닛:11; 가치:4200
 `;
 
-window.ZERATUL_CARD_NAME_REVIEW_LIST = [
+export const ZERATUL_CARD_NAME_REVIEW_LIST = [
   "끝없는 군단",
   "균열 청소",
   "공허 지원군",
@@ -154,7 +152,7 @@ window.ZERATUL_CARD_NAME_REVIEW_LIST = [
   "델타 중립",
 ];
 
-window.ZERATUL_CARD_POOL_SOURCE = {
+export const ZERATUL_CARD_POOL_SOURCE = {
   name: "SCTavernVoidSeekerPublic",
   url: "https://gameindustryremnant.github.io/SCTavernVoidSeekerPublic/",
   koreanReferenceUrl: "https://namu.moe/w/%EC%8A%A4%ED%83%80%20%EC%84%A0%EC%88%A0%EC%A7%91%20%EC%A0%84%ED%88%AC/%EC%B9%B4%EB%93%9C",
@@ -163,3 +161,9 @@ window.ZERATUL_CARD_POOL_SOURCE = {
   upstreamUpdated: "2026-05-06",
   note: "Korean-only card pool. Core cards are enabled as candidates; expansion and low-probability special cards are included as disabled autocomplete/observation cards.",
 };
+
+if (typeof window !== "undefined") {
+  window.ZERATUL_DEFAULT_CARD_POOL = ZERATUL_DEFAULT_CARD_POOL;
+  window.ZERATUL_CARD_NAME_REVIEW_LIST = ZERATUL_CARD_NAME_REVIEW_LIST;
+  window.ZERATUL_CARD_POOL_SOURCE = ZERATUL_CARD_POOL_SOURCE;
+}

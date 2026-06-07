@@ -1,1 +1,5 @@
 memo/
+node_modules/
+dist/
+coverage/
+vite-dev*.log
