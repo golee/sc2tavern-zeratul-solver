@@ -25,6 +25,8 @@ const state = {
   search: "",
 };
 
+let suppressNextComboClick = false;
+
 const el = {
   poolTabs: document.getElementById("poolTabs"),
   poolTableBody: document.getElementById("poolTableBody"),
@@ -515,6 +517,24 @@ function syncLiveInputs() {
   state.currentCards = readInputs(el.liveInputs);
 }
 
+function focusComboInput(input, options = {}) {
+  const combobox = getCombobox(input);
+  if (options.suppressMenu && combobox) {
+    combobox.dataset.suppressNextFocus = "true";
+    window.setTimeout(() => {
+      if (combobox.dataset.suppressNextFocus === "true") {
+        delete combobox.dataset.suppressNextFocus;
+      }
+    }, 0);
+  }
+
+  input.focus();
+
+  if (options.suppressMenu) {
+    window.requestAnimationFrame(() => closeCombobox(input));
+  }
+}
+
 function chooseComboCard(input, cardName) {
   const combobox = getCombobox(input);
   const mode = combobox?.dataset.comboMode;
@@ -525,13 +545,13 @@ function chooseComboCard(input, cardName) {
   if (mode === "observation") {
     addObservation(result, cardName);
     input.value = "";
-    input.focus();
+    focusComboInput(input, { suppressMenu: true });
     return;
   }
 
   syncLiveInputs();
   renderAll();
-  input.focus();
+  focusComboInput(input, { suppressMenu: true });
 }
 
 function handleComboInput(event) {
@@ -557,7 +577,12 @@ function handleComboInput(event) {
 
 function handleComboFocus(event) {
   const input = getComboInputFromEvent(event);
-  if (!input || !getCombobox(input)) return;
+  const combobox = getCombobox(input);
+  if (!input || !combobox) return;
+  if (combobox.dataset.suppressNextFocus === "true") {
+    delete combobox.dataset.suppressNextFocus;
+    return;
+  }
   renderCombobox(input);
 }
 
@@ -610,25 +635,48 @@ function handleComboCompositionEnd(event) {
   });
 }
 
+function handleComboPointerDown(event) {
+  const option = closestFromEvent(event, ".combo-option");
+  if (!option) return;
+
+  event.preventDefault();
+  suppressNextComboClick = true;
+  window.setTimeout(() => {
+    suppressNextComboClick = false;
+  }, 250);
+  const input = option.closest(".card-combobox")?.querySelector("input");
+  if (input) chooseComboCard(input, option.dataset.cardName);
+}
+
 function handleComboClick(event) {
+  if (suppressNextComboClick) {
+    suppressNextComboClick = false;
+    event.preventDefault();
+    document.querySelectorAll(".card-combobox.open input").forEach(closeCombobox);
+    return true;
+  }
+
   const option = closestFromEvent(event, ".combo-option");
   if (option) {
     const input = option.closest(".card-combobox")?.querySelector("input");
     if (input) chooseComboCard(input, option.dataset.cardName);
-    return;
+    return true;
   }
 
   const toggle = closestFromEvent(event, ".combo-toggle");
   if (toggle) {
     const input = toggle.closest(".card-combobox")?.querySelector("input");
-    if (!input) return;
+    if (!input) return false;
     if (getCombobox(input).classList.contains("open")) {
       closeCombobox(input);
     } else {
       input.focus();
       renderCombobox(input);
     }
+    return true;
   }
+
+  return false;
 }
 
 function handleComboPointerMove(event) {
@@ -899,9 +947,10 @@ function bindEvents() {
   document.addEventListener("focusin", handleComboFocus);
   document.addEventListener("compositionend", handleComboCompositionEnd);
   document.addEventListener("keydown", handleComboKeydown);
+  document.addEventListener("pointerdown", handleComboPointerDown);
   document.addEventListener("click", (event) => {
-    handleComboClick(event);
-    if (!closestFromEvent(event, ".card-combobox")) {
+    const handledComboClick = handleComboClick(event);
+    if (!handledComboClick && !closestFromEvent(event, ".card-combobox")) {
       document.querySelectorAll(".card-combobox.open input").forEach(closeCombobox);
     }
   });
