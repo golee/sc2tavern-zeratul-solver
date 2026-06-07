@@ -4,6 +4,7 @@ const { disassemble, getChoseong } = window.EsHangul;
 const MAX_OBSERVATION_CARDS = 10;
 const MAX_OBSERVATIONS = 30;
 const CLOSE_VALUE_THRESHOLD = 200;
+const OBSERVATIONS_STORAGE_KEY = "zeratulResolver.observations.v1";
 const BASE_POOL_FILTERS = [
   { type: "all", value: "전체", label: "전체" },
   { type: "race", value: "프로토스", label: "프로토스" },
@@ -186,6 +187,51 @@ function getCleanCards(values) {
   });
 
   return result;
+}
+
+function normalizeStoredObservations(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      const result = item?.result;
+      const cards = getCleanCards(Array.isArray(item?.cards) ? item.cards : []);
+      if (!["Y", "N"].includes(result) || !cards.length) return null;
+
+      return { result, cards };
+    })
+    .filter(Boolean)
+    .slice(0, MAX_OBSERVATIONS)
+    .map((observation, index) => ({
+      id: index + 1,
+      ...observation,
+    }));
+}
+
+function loadSessionObservations() {
+  try {
+    const stored = window.sessionStorage.getItem(OBSERVATIONS_STORAGE_KEY);
+    if (!stored) return;
+    state.observations = normalizeStoredObservations(JSON.parse(stored));
+  } catch {
+    state.observations = [];
+  }
+}
+
+function saveSessionObservations() {
+  try {
+    if (!state.observations.length) {
+      window.sessionStorage.removeItem(OBSERVATIONS_STORAGE_KEY);
+      return;
+    }
+
+    window.sessionStorage.setItem(
+      OBSERVATIONS_STORAGE_KEY,
+      JSON.stringify(state.observations.map(({ id, result, cards }) => ({ id, result, cards })))
+    );
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
 }
 
 function computeCandidates() {
@@ -922,6 +968,7 @@ function addObservation(result, cardName) {
     result,
     cards,
   });
+  saveSessionObservations();
   renderAll();
 }
 
@@ -959,6 +1006,7 @@ function bindEvents() {
   document.getElementById("clearObservationsBtn").addEventListener("click", () => {
     if (!window.confirm("관측값을 모두 지울까요?")) return;
     state.observations = [];
+    saveSessionObservations();
     renderAll();
   });
   document.getElementById("clearLiveBtn").addEventListener("click", () => {
@@ -988,6 +1036,7 @@ function bindEvents() {
 
     if (button.dataset.action === "delete-observation") {
       state.observations = state.observations.filter((item) => item.id !== id);
+      saveSessionObservations();
       renderAll();
     }
   });
@@ -1002,5 +1051,6 @@ function bindEvents() {
   });
 }
 
+loadSessionObservations();
 bindEvents();
 renderAll();
