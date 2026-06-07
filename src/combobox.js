@@ -283,6 +283,12 @@ export function createComboboxController({
       return true;
     }
 
+    const clickedInput = getComboInputFromEvent(event);
+    if (clickedInput && getCombobox(clickedInput)) {
+      renderCombobox(clickedInput);
+      return true;
+    }
+
     const toggle = closestFromEvent(event, ".combo-toggle");
     if (toggle) {
       const input = toggle.closest(".card-combobox")?.querySelector("input");
