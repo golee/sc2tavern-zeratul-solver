@@ -699,23 +699,92 @@ td {
     padding-top: 8px;
   }
 
-  .topbar,
   .panel-header,
   .observation-picker-grid {
     display: grid;
     grid-template-columns: 1fr;
   }
 
-  .top-actions,
+  .topbar {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0 12px;
+  }
+
+  .brand {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 10px;
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border-radius: 7px;
+  }
+
+  .brand-mark span {
+    width: 18px;
+    height: 18px;
+    border-width: 2px;
+  }
+
+  .brand h1 {
+    font-size: 20px;
+  }
+
+  .top-actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+
+  .top-actions .link-button {
+    display: none;
+  }
+
+  .top-actions > * {
+    flex: 0 0 auto;
+  }
+
+  .top-actions button {
+    min-height: 30px;
+    padding: 5px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
   .button-row,
   .filters {
     flex-wrap: wrap;
     align-items: stretch;
   }
 
-  .top-actions > *,
   .button-row > * {
     flex: 1 1 auto;
+  }
+
+  .observation-panel .panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .observation-panel .panel-header > div:first-child {
+    min-width: 0;
+  }
+
+  .observation-panel .button-row {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+  }
+
+  .observation-panel .button-row > * {
+    flex: 0 0 auto;
+    min-height: 30px;
+    padding: 5px 9px;
+    font-size: 12px;
   }
 
   .card-input-grid {
@@ -725,5 +794,21 @@ td {
   .filters input,
   .filters select {
     width: 100%;
+  }
+
+  .candidates-table table {
+    min-width: 760px;
+  }
+
+  .candidates-table th:nth-child(1),
+  .candidates-table td:nth-child(1) {
+    width: 180px;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+
+  .candidates-table th:nth-child(7),
+  .candidates-table td:nth-child(7) {
+    width: 150px;
   }
 }
