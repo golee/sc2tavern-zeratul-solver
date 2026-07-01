@@ -27,7 +27,7 @@
           </div>
         </div>
         <div class="top-actions">
-          <a class="link-button" href="https://wiki.biligame.com/sctavern/%E9%A6%96%E9%A1%B5" target="_blank" rel="noreferrer">BWIKI</a>
+          <button type="button" class="danger" id="resetAllBtn">전체 초기화</button>
           <button type="button" id="copyCandidatesBtn">후보 복사</button>
         </div>
       </header>
@@ -64,7 +64,7 @@
               <p>카드 진입 후 암흑기사(정예) 수가 홀수면 Y, 짝수면 N에 넣으면 됩니다.</p>
             </div>
             <div class="button-row">
-              <button type="button" class="danger" id="clearObservationsBtn">초기화</button>
+              <button type="button" class="danger" id="clearObservationsBtn">관측 초기화</button>
             </div>
           </div>
           <div class="observation-picker-grid">
@@ -196,7 +196,7 @@
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="app.js?v=6"></script>
+    <script type="module" src="app.js?v=7"></script>
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
       const vercelInsightsScript = document.createElement("script");

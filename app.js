@@ -34,8 +34,9 @@ const MAX_OBSERVATION_CARDS = 10;
 const MAX_OBSERVATIONS = 30;
 const OBSERVATIONS_STORAGE_KEY = "zeratulResolver.observations.v1";
 const FAILED_CANDIDATES_STORAGE_KEY = "zeratulResolver.failedCandidates.v1";
+const DEFAULT_POOL_FILTER = { type: "all", value: "전체" };
 const BASE_POOL_FILTERS = [
-  { type: "all", value: "전체", label: "전체" },
+  { ...DEFAULT_POOL_FILTER, label: "전체" },
   { type: "race", value: "프로토스", label: "프로토스" },
   { type: "race", value: "테란", label: "테란" },
   { type: "race", value: "저그", label: "저그" },
@@ -51,7 +52,7 @@ const state = {
   observations: [],
   currentCards: Array(MAX_OBSERVATION_CARDS).fill(""),
   failedCandidateKeys: new Set(),
-  poolFilter: { type: "all", value: "전체" },
+  poolFilter: { ...DEFAULT_POOL_FILTER },
   filter: "possible",
   search: "",
 };
@@ -154,6 +155,30 @@ function copyCandidates() {
     .catch(() => showToast("클립보드 복사에 실패했습니다."));
 }
 
+function clearObservationDraftInputs() {
+  document.querySelectorAll('[data-combo-mode="observation"] input').forEach((input) => {
+    input.value = "";
+  });
+}
+
+function resetAll() {
+  if (!window.confirm("모든 관측값, 현재 카드, 예언 실패 표시, 검색/필터를 초기화할까요?")) return;
+
+  state.observations = [];
+  state.currentCards = Array(MAX_OBSERVATION_CARDS).fill("");
+  state.failedCandidateKeys = new Set();
+  state.poolFilter = { ...DEFAULT_POOL_FILTER };
+  state.filter = "possible";
+  state.search = "";
+
+  persistObservations();
+  persistFailedCandidates();
+  clearObservationDraftInputs();
+  closeOpenComboboxes();
+  renderAll();
+  showToast("전체 초기화했습니다.");
+}
+
 const combobox = createComboboxController({
   addObservation,
   findCard: cardSearch.findCard,
@@ -179,6 +204,8 @@ function bindComboboxEvents() {
 }
 
 function bindToolbarEvents() {
+  document.getElementById("resetAllBtn").addEventListener("click", resetAll);
+
   document.getElementById("clearObservationsBtn").addEventListener("click", () => {
     if (!window.confirm("관측값을 모두 지울까요?")) return;
     state.observations = [];
