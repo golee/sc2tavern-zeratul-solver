@@ -412,7 +412,7 @@ td {
   left: 0;
   z-index: 20;
   display: none;
-  max-height: 252px;
+  max-height: min(60vh, 560px);
   overflow: auto;
   border: 1px solid rgba(117, 138, 111, 0.64);
   border-radius: 6px;
@@ -847,6 +847,10 @@ td {
 
   .card-input-grid {
     grid-template-columns: 1fr;
+  }
+
+  .combo-menu {
+    max-height: min(50vh, 420px);
   }
 
   .filters input,
