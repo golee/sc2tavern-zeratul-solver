@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#151715">
     <link rel="icon" type="image/png" sizes="76x76" href="favicon.png">
     <style>html.app-loading .app-shell{visibility:hidden}</style>
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=10">
   </head>
   <body>
     <main class="app-shell">
@@ -111,15 +111,15 @@
             </div>
           </div>
           <div class="card-input-grid live-inputs" id="liveInputs"></div>
-          <div class="table-frame">
+          <div class="table-frame live-table">
             <table>
               <thead>
                 <tr>
-                  <th>추천</th>
                   <th>카드</th>
                   <th>가능</th>
                   <th>모순</th>
                   <th>근거</th>
+                  <th>관측 기록</th>
                 </tr>
               </thead>
               <tbody id="liveBody"></tbody>
@@ -196,7 +196,7 @@
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="app.js?v=7"></script>
+    <script type="module" src="app.js?v=8"></script>
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
       const vercelInsightsScript = document.createElement("script");

@@ -121,39 +121,65 @@ export function renderObservations({ el, state }) {
 export function renderLive({ el, state, candidates }) {
   const candidateByKey = new Map(candidates.map((candidate) => [candidate.key, candidate]));
   const currentCards = getCleanCards(state.currentCards);
+  const cardName = currentCards[0] || "";
 
-  if (!currentCards.length) {
-    setEmptyRow(el.liveBody, 5, "현재 보이는 카드가 없습니다.");
+  if (!cardName) {
+    setEmptyRow(el.liveBody, 5, "현재 턴 카드가 없습니다.");
     return;
   }
 
-  const rows = currentCards.map((cardName, index) => {
-    const key = normalizeName(cardName);
-    const candidate = candidateByKey.get(key);
-    const tr = document.createElement("tr");
-    tr.append(makeCell(String(index + 1)), makeCell(cardName));
+  const makeObservationActionCell = (disabled = false) => {
+    const td = document.createElement("td");
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
 
-    const possibleCell = document.createElement("td");
-    if (!candidate) {
-      possibleCell.append(makeTag("NO", "no"));
-      tr.append(possibleCell, makeCell("카드풀 없음"), makeCell("카드풀 없음"));
-      return tr;
-    }
+    ["Y", "N"].forEach((result) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = `${result} 기록`;
+      button.dataset.action = "record-live-observation";
+      button.dataset.result = result;
+      button.dataset.cardName = cardName;
+      button.disabled = disabled;
+      if (result === "N") button.className = "danger";
+      actions.append(button);
+    });
 
-    possibleCell.append(makeTag(candidate.possible ? "YES" : "NO", candidate.possible ? "yes" : "no"));
+    td.append(actions);
+    return td;
+  };
+
+  const key = normalizeName(cardName);
+  const candidate = candidateByKey.get(key);
+  const tr = document.createElement("tr");
+  tr.append(makeCell(cardName));
+
+  const possibleCell = document.createElement("td");
+  if (!candidate) {
+    possibleCell.append(makeTag("NO", "no"));
     tr.append(
       possibleCell,
-      makeCell(String(candidate.contradictions)),
-      makeCell(candidate.manuallyFailed
-        ? "예언 실패 표시됨"
-        : candidate.possible
-          ? "정답 후보. 우선 확인/구매 후보"
-          : "현재 정보상 제외")
+      makeCell("-"),
+      makeCell("카드풀 없음"),
+      makeObservationActionCell(true)
     );
-    return tr;
-  });
+    el.liveBody.replaceChildren(tr);
+    return;
+  }
 
-  el.liveBody.replaceChildren(...rows);
+  possibleCell.append(makeTag(candidate.possible ? "YES" : "NO", candidate.possible ? "yes" : "no"));
+  tr.append(
+    possibleCell,
+    makeCell(String(candidate.contradictions)),
+    makeCell(candidate.manuallyFailed
+      ? "예언 실패 표시됨"
+      : candidate.possible
+        ? "정답 후보. 관측 결과를 기록하세요."
+        : "현재 정보상 제외"),
+    makeObservationActionCell()
+  );
+
+  el.liveBody.replaceChildren(tr);
 }
 
 function sortedCandidates(candidates) {

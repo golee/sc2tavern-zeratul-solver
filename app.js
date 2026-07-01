@@ -13,6 +13,7 @@ import {
   normalizeName,
   parseCardPool,
 } from "./src/resolver.js";
+import { hasObservationForCard } from "./src/observations.js";
 import {
   renderCandidates,
   renderCardPoolTable,
@@ -30,7 +31,7 @@ import {
 } from "./src/session-storage.js";
 import { disassemble, getChoseong } from "./vendor/es-hangul.browser.js";
 
-const MAX_OBSERVATION_CARDS = 10;
+const MAX_CURRENT_CARDS = 1;
 const MAX_OBSERVATIONS = 30;
 const OBSERVATIONS_STORAGE_KEY = "zeratulResolver.observations.v1";
 const FAILED_CANDIDATES_STORAGE_KEY = "zeratulResolver.failedCandidates.v1";
@@ -50,7 +51,7 @@ const defaultPoolText = (typeof ZERATUL_DEFAULT_CARD_POOL === "string" && ZERATU
 const state = {
   cards: [],
   observations: [],
-  currentCards: Array(MAX_OBSERVATION_CARDS).fill(""),
+  currentCards: Array(MAX_CURRENT_CARDS).fill(""),
   failedCandidateKeys: new Set(),
   poolFilter: { ...DEFAULT_POOL_FILTER },
   filter: "possible",
@@ -98,7 +99,7 @@ function persistFailedCandidates() {
 }
 
 function syncLiveInputs() {
-  state.currentCards = readInputs(el.liveInputs);
+  state.currentCards = readInputs(el.liveInputs).slice(0, MAX_CURRENT_CARDS);
 }
 
 function renderAll() {
@@ -107,7 +108,7 @@ function renderAll() {
 
   el.candidateFilter.value = state.filter;
   el.candidateSearch.value = state.search;
-  renderInputGrid(el.liveInputs, "liveCard", state.currentCards, MAX_OBSERVATION_CARDS);
+  renderInputGrid(el.liveInputs, "liveCard", state.currentCards, MAX_CURRENT_CARDS);
   renderPoolTabs({ el, state, basePoolFilters: BASE_POOL_FILTERS });
   renderCardPoolTable({ el, state });
   renderObservations({ el, state });
@@ -126,6 +127,11 @@ function addObservation(result, cardName) {
   const cards = getCleanCards([cardName]);
   if (!cards.length) {
     showToast("관측 카드가 비어 있습니다.");
+    return;
+  }
+
+  if (hasObservationForCard(state.observations, result, cards[0])) {
+    showToast("이미 같은 관측값이 있습니다.");
     return;
   }
 
@@ -165,7 +171,7 @@ function resetAll() {
   if (!window.confirm("모든 관측값, 현재 카드, 예언 실패 표시, 검색/필터를 초기화할까요?")) return;
 
   state.observations = [];
-  state.currentCards = Array(MAX_OBSERVATION_CARDS).fill("");
+  state.currentCards = Array(MAX_CURRENT_CARDS).fill("");
   state.failedCandidateKeys = new Set();
   state.poolFilter = { ...DEFAULT_POOL_FILTER };
   state.filter = "possible";
@@ -214,7 +220,7 @@ function bindToolbarEvents() {
   });
 
   document.getElementById("clearLiveBtn").addEventListener("click", () => {
-    state.currentCards = Array(MAX_OBSERVATION_CARDS).fill("");
+    state.currentCards = Array(MAX_CURRENT_CARDS).fill("");
     renderAll();
   });
 
@@ -248,6 +254,24 @@ function bindObservationEvents() {
       persistObservations();
       renderAll();
     }
+  });
+}
+
+function bindLiveEvents() {
+  el.liveBody.addEventListener("click", (event) => {
+    const button = closestFromEvent(event, 'button[data-action="record-live-observation"]');
+    if (!button) return;
+
+    const result = button.dataset.result;
+    if (!["Y", "N"].includes(result)) return;
+
+    const card = cardSearch.findCard(button.dataset.cardName || "");
+    if (!card) {
+      showToast("카드풀에 없는 카드는 관측으로 기록할 수 없습니다.");
+      return;
+    }
+
+    addObservation(result, card.name);
   });
 }
 
@@ -288,6 +312,7 @@ function bindEvents() {
   bindToolbarEvents();
   bindPoolEvents();
   bindObservationEvents();
+  bindLiveEvents();
   bindCandidateEvents();
 }
 

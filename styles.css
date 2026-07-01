@@ -62,6 +62,16 @@ button:active,
   transform: translateY(1px);
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+button:disabled:hover {
+  background: #252a25;
+  border-color: var(--line);
+}
+
 button.danger {
   border-color: #65403b;
   color: #ffd9d5;
@@ -476,8 +486,26 @@ td {
   min-width: 0;
 }
 
-.live-inputs {
+.card-input-grid.live-inputs {
+  grid-template-columns: minmax(0, 1fr);
   margin-bottom: 12px;
+}
+
+.live-table th:nth-child(1),
+.live-table td:nth-child(1) {
+  width: 28%;
+}
+
+.live-table th:nth-child(2),
+.live-table td:nth-child(2),
+.live-table th:nth-child(3),
+.live-table td:nth-child(3) {
+  width: 72px;
+}
+
+.live-table th:nth-child(5),
+.live-table td:nth-child(5) {
+  width: 150px;
 }
 
 .observation-table {
@@ -579,6 +607,7 @@ td {
 
 .row-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -814,6 +843,10 @@ td {
 
   .candidates-table table {
     min-width: 720px;
+  }
+
+  .live-table table {
+    min-width: 560px;
   }
 
   .candidates-table th:nth-child(1),

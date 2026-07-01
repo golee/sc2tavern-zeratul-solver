@@ -1,7 +1,7 @@
 import { closestFromEvent } from "./app-dom.js";
 
 export function renderInputGrid(container, prefix, values, maxCards) {
-  if (!container.childElementCount) {
+  if (container.childElementCount !== maxCards) {
     const controls = Array.from({ length: maxCards }, (_, index) => {
       const combobox = document.createElement("div");
       combobox.className = "card-combobox";
@@ -11,7 +11,7 @@ export function renderInputGrid(container, prefix, values, maxCards) {
       input.type = "text";
       input.autocomplete = "off";
       input.spellcheck = false;
-      input.placeholder = `카드 ${index + 1}`;
+      input.placeholder = maxCards === 1 ? "카드명 입력/선택" : `카드 ${index + 1}`;
       input.setAttribute("aria-autocomplete", "list");
       input.setAttribute("aria-expanded", "false");
       input.dataset.index = String(index);
