@@ -98,10 +98,9 @@ function closeOtherComboboxes(currentInput) {
 
 export function createComboboxController({
   addObservation,
+  addLiveCard,
   findCard,
   getCardSuggestions,
-  renderAll,
-  syncLiveInputs,
 }) {
   let suppressNextComboClick = false;
 
@@ -169,8 +168,8 @@ export function createComboboxController({
       return;
     }
 
-    syncLiveInputs();
-    renderAll();
+    addLiveCard(cardName);
+    input.value = "";
     focusComboInput(input, { suppressMenu: true });
   }
 
@@ -187,9 +186,9 @@ export function createComboboxController({
       return;
     }
 
-    if (mode === "live") {
-      syncLiveInputs();
-      renderAll();
+    if (mode === "live" && exactCard && !event.isComposing) {
+      chooseComboCard(input, exactCard.name);
+      return;
     }
 
     renderCombobox(input);

@@ -493,19 +493,22 @@ td {
 
 .live-table th:nth-child(1),
 .live-table td:nth-child(1) {
-  width: 28%;
+  width: 52px;
 }
 
 .live-table th:nth-child(2),
-.live-table td:nth-child(2),
-.live-table th:nth-child(3),
-.live-table td:nth-child(3) {
-  width: 72px;
+.live-table td:nth-child(2) {
+  width: auto;
 }
 
-.live-table th:nth-child(5),
-.live-table td:nth-child(5) {
+.live-table th:nth-child(3),
+.live-table td:nth-child(3) {
   width: 150px;
+}
+
+.live-table th:nth-child(4),
+.live-table td:nth-child(4) {
+  width: 72px;
 }
 
 .observation-table {

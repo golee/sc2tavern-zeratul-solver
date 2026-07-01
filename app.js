@@ -4,7 +4,6 @@ import { createCardSearch } from "./src/card-search.js";
 import {
   closeOpenComboboxes,
   createComboboxController,
-  readInputs,
   renderInputGrid,
 } from "./src/combobox.js";
 import {
@@ -31,7 +30,7 @@ import {
 } from "./src/session-storage.js";
 import { disassemble, getChoseong } from "./vendor/es-hangul.browser.js";
 
-const MAX_CURRENT_CARDS = 1;
+const CURRENT_TURN_INPUTS = 1;
 const MAX_OBSERVATIONS = 30;
 const OBSERVATIONS_STORAGE_KEY = "zeratulResolver.observations.v1";
 const FAILED_CANDIDATES_STORAGE_KEY = "zeratulResolver.failedCandidates.v1";
@@ -51,7 +50,7 @@ const defaultPoolText = (typeof ZERATUL_DEFAULT_CARD_POOL === "string" && ZERATU
 const state = {
   cards: [],
   observations: [],
-  currentCards: Array(MAX_CURRENT_CARDS).fill(""),
+  currentCards: [],
   failedCandidateKeys: new Set(),
   poolFilter: { ...DEFAULT_POOL_FILTER },
   filter: "possible",
@@ -98,17 +97,13 @@ function persistFailedCandidates() {
   saveSessionFailedCandidates(FAILED_CANDIDATES_STORAGE_KEY, state.failedCandidateKeys);
 }
 
-function syncLiveInputs() {
-  state.currentCards = readInputs(el.liveInputs).slice(0, MAX_CURRENT_CARDS);
-}
-
 function renderAll() {
   state.cards = parseCardPool(defaultPoolText);
   const candidates = computeCandidates();
 
   el.candidateFilter.value = state.filter;
   el.candidateSearch.value = state.search;
-  renderInputGrid(el.liveInputs, "liveCard", state.currentCards, MAX_CURRENT_CARDS);
+  renderInputGrid(el.liveInputs, "liveCard", [""], CURRENT_TURN_INPUTS);
   renderPoolTabs({ el, state, basePoolFilters: BASE_POOL_FILTERS });
   renderCardPoolTable({ el, state });
   renderObservations({ el, state });
@@ -145,6 +140,22 @@ function addObservation(result, cardName) {
   renderAll();
 }
 
+function addLiveCard(cardName) {
+  const card = cardSearch.findCard(cardName);
+  if (!card) {
+    showToast("카드풀에 없는 카드는 현재 턴에 추가할 수 없습니다.");
+    return;
+  }
+
+  if (state.currentCards.some((currentCard) => normalizeName(currentCard) === card.key)) {
+    showToast("이미 현재 턴에 있는 카드입니다.");
+    return;
+  }
+
+  state.currentCards.push(card.name);
+  renderAll();
+}
+
 function copyCandidates() {
   const names = computeCandidates()
     .filter((candidate) => candidate.possible)
@@ -171,7 +182,7 @@ function resetAll() {
   if (!window.confirm("모든 관측값, 현재 카드, 예언 실패 표시, 검색/필터를 초기화할까요?")) return;
 
   state.observations = [];
-  state.currentCards = Array(MAX_CURRENT_CARDS).fill("");
+  state.currentCards = [];
   state.failedCandidateKeys = new Set();
   state.poolFilter = { ...DEFAULT_POOL_FILTER };
   state.filter = "possible";
@@ -187,10 +198,9 @@ function resetAll() {
 
 const combobox = createComboboxController({
   addObservation,
+  addLiveCard,
   findCard: cardSearch.findCard,
   getCardSuggestions: cardSearch.getCardSuggestions,
-  renderAll,
-  syncLiveInputs,
 });
 
 function bindComboboxEvents() {
@@ -220,7 +230,7 @@ function bindToolbarEvents() {
   });
 
   document.getElementById("clearLiveBtn").addEventListener("click", () => {
-    state.currentCards = Array(MAX_CURRENT_CARDS).fill("");
+    state.currentCards = [];
     renderAll();
   });
 
@@ -259,8 +269,18 @@ function bindObservationEvents() {
 
 function bindLiveEvents() {
   el.liveBody.addEventListener("click", (event) => {
-    const button = closestFromEvent(event, 'button[data-action="record-live-observation"]');
+    const button = closestFromEvent(event, "button[data-action]");
     if (!button) return;
+
+    if (button.dataset.action === "delete-live-card") {
+      const index = Number(button.dataset.index);
+      if (!Number.isInteger(index)) return;
+      state.currentCards.splice(index, 1);
+      renderAll();
+      return;
+    }
+
+    if (button.dataset.action !== "record-live-observation") return;
 
     const result = button.dataset.result;
     if (!["Y", "N"].includes(result)) return;

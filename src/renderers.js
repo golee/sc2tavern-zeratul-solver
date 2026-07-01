@@ -118,17 +118,15 @@ export function renderObservations({ el, state }) {
   el.observationBody.replaceChildren(...rows);
 }
 
-export function renderLive({ el, state, candidates }) {
-  const candidateByKey = new Map(candidates.map((candidate) => [candidate.key, candidate]));
+export function renderLive({ el, state }) {
   const currentCards = getCleanCards(state.currentCards);
-  const cardName = currentCards[0] || "";
 
-  if (!cardName) {
-    setEmptyRow(el.liveBody, 5, "현재 턴 카드가 없습니다.");
+  if (!currentCards.length) {
+    setEmptyRow(el.liveBody, 4, "현재 턴 카드가 없습니다.");
     return;
   }
 
-  const makeObservationActionCell = (disabled = false) => {
+  const makeObservationActionCell = (cardName) => {
     const td = document.createElement("td");
     const actions = document.createElement("div");
     actions.className = "row-actions";
@@ -140,7 +138,6 @@ export function renderLive({ el, state, candidates }) {
       button.dataset.action = "record-live-observation";
       button.dataset.result = result;
       button.dataset.cardName = cardName;
-      button.disabled = disabled;
       if (result === "N") button.className = "danger";
       actions.append(button);
     });
@@ -149,37 +146,26 @@ export function renderLive({ el, state, candidates }) {
     return td;
   };
 
-  const key = normalizeName(cardName);
-  const candidate = candidateByKey.get(key);
-  const tr = document.createElement("tr");
-  tr.append(makeCell(cardName));
+  const rows = currentCards.map((cardName, index) => {
+    const tr = document.createElement("tr");
+    tr.append(makeCell(String(index + 1)), makeCell(cardName), makeObservationActionCell(cardName));
 
-  const possibleCell = document.createElement("td");
-  if (!candidate) {
-    possibleCell.append(makeTag("NO", "no"));
-    tr.append(
-      possibleCell,
-      makeCell("-"),
-      makeCell("카드풀 없음"),
-      makeObservationActionCell(true)
-    );
-    el.liveBody.replaceChildren(tr);
-    return;
-  }
+    const actionCell = document.createElement("td");
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.textContent = "삭제";
+    deleteButton.className = "danger";
+    deleteButton.dataset.action = "delete-live-card";
+    deleteButton.dataset.index = String(index);
+    actions.append(deleteButton);
+    actionCell.append(actions);
+    tr.append(actionCell);
+    return tr;
+  });
 
-  possibleCell.append(makeTag(candidate.possible ? "YES" : "NO", candidate.possible ? "yes" : "no"));
-  tr.append(
-    possibleCell,
-    makeCell(String(candidate.contradictions)),
-    makeCell(candidate.manuallyFailed
-      ? "예언 실패 표시됨"
-      : candidate.possible
-        ? "정답 후보. 관측 결과를 기록하세요."
-        : "현재 정보상 제외"),
-    makeObservationActionCell()
-  );
-
-  el.liveBody.replaceChildren(tr);
+  el.liveBody.replaceChildren(...rows);
 }
 
 function sortedCandidates(candidates) {
