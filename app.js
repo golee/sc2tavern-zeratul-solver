@@ -8,6 +8,7 @@ import {
 } from "./src/combobox.js";
 import {
   computeCandidates as computeCandidatesCore,
+  computeLiveRecommendations,
   getCleanCards,
   normalizeName,
   parseCardPool,
@@ -100,6 +101,10 @@ function persistFailedCandidates() {
 function renderAll() {
   state.cards = parseCardPool(defaultPoolText);
   const candidates = computeCandidates();
+  const liveRecommendations = computeLiveRecommendations(state.cards, {
+    candidates,
+    currentCards: state.currentCards,
+  });
 
   el.candidateFilter.value = state.filter;
   el.candidateSearch.value = state.search;
@@ -107,7 +112,7 @@ function renderAll() {
   renderPoolTabs({ el, state, basePoolFilters: BASE_POOL_FILTERS });
   renderCardPoolTable({ el, state });
   renderObservations({ el, state });
-  renderLive({ el, state, candidates });
+  renderLive({ el, recommendations: liveRecommendations });
   renderCandidates({ el, state, candidates });
   renderSectionCounts({ el, state, candidates });
   renderConditionSummary({ el, candidates });

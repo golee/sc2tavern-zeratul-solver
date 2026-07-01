@@ -1,7 +1,6 @@
 import {
   formatDiscreteValues,
   formatIntegerSegments,
-  getCleanCards,
   normalizeName,
 } from "./resolver.js";
 import {
@@ -118,11 +117,19 @@ export function renderObservations({ el, state }) {
   el.observationBody.replaceChildren(...rows);
 }
 
-export function renderLive({ el, state }) {
-  const currentCards = getCleanCards(state.currentCards);
+function recommendationTagType(label) {
+  if (label === "강력" || label === "확정") return "yes";
+  if (label === "낮음" || label === "오류") return "no";
+  return "neutral";
+}
 
-  if (!currentCards.length) {
-    setEmptyRow(el.liveBody, 4, "현재 턴 카드가 없습니다.");
+function formatExpected(value) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+export function renderLive({ el, recommendations }) {
+  if (!recommendations.length) {
+    setEmptyRow(el.liveBody, 6, "현재 턴 카드가 없습니다.");
     return;
   }
 
@@ -146,9 +153,24 @@ export function renderLive({ el, state }) {
     return td;
   };
 
-  const rows = currentCards.map((cardName, index) => {
+  const rows = recommendations.map((recommendation, rankIndex) => {
     const tr = document.createElement("tr");
-    tr.append(makeCell(String(index + 1)), makeCell(cardName), makeObservationActionCell(cardName));
+
+    const recommendationCell = document.createElement("td");
+    recommendationCell.append(makeTag(recommendation.label, recommendationTagType(recommendation.label)));
+    tr.append(
+      recommendationCell,
+      makeCell(recommendation.name),
+      makeCell(`Y ${recommendation.yMatches} / N ${recommendation.nMatches}`)
+    );
+
+    const valueCell = makeCell(
+      recommendation.possibleCount <= 1
+        ? "-"
+        : `최소 ${recommendation.guaranteedEliminated}명`
+    );
+    valueCell.title = `기대 ${formatExpected(recommendation.expectedEliminated)}명 감소`;
+    tr.append(valueCell, makeObservationActionCell(recommendation.name));
 
     const actionCell = document.createElement("td");
     const actions = document.createElement("div");
@@ -158,10 +180,13 @@ export function renderLive({ el, state }) {
     deleteButton.textContent = "삭제";
     deleteButton.className = "danger";
     deleteButton.dataset.action = "delete-live-card";
-    deleteButton.dataset.index = String(index);
+    deleteButton.dataset.index = String(recommendation.index);
+    deleteButton.setAttribute("aria-label", `${recommendation.name} 삭제`);
     actions.append(deleteButton);
     actionCell.append(actions);
     tr.append(actionCell);
+
+    tr.dataset.rank = String(rankIndex + 1);
     return tr;
   });
 

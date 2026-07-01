@@ -4,7 +4,7 @@
 import { describe, expect, test } from "vitest";
 import { createComboboxController, renderInputGrid } from "../src/combobox.js";
 import { renderLive } from "../src/renderers.js";
-import { computeCandidates, parseCardPool } from "../src/resolver.js";
+import { computeCandidates, computeLiveRecommendations, parseCardPool } from "../src/resolver.js";
 
 const fixturePoolText = `
 카드명	종족/타입	티어	사용 여부	메모
@@ -15,11 +15,11 @@ const fixturePoolText = `
 
 function liveFixture(currentCards) {
   const cards = parseCardPool(fixturePoolText);
-  const state = { currentCards };
   const candidates = computeCandidates(cards, { currentCards });
+  const recommendations = computeLiveRecommendations(cards, { candidates, currentCards });
   const liveBody = document.createElement("tbody");
 
-  renderLive({ el: { liveBody }, state, candidates });
+  renderLive({ el: { liveBody }, recommendations });
 
   return { liveBody };
 }
@@ -44,11 +44,11 @@ describe("current turn UI", () => {
     const { liveBody } = liveFixture([""]);
 
     const emptyCell = liveBody.querySelector(".empty-row td");
-    expect(emptyCell.colSpan).toBe(4);
+    expect(emptyCell.colSpan).toBe(6);
     expect(emptyCell.textContent).toBe("현재 턴 카드가 없습니다.");
   });
 
-  test("renders accumulated current turn cards with record and delete actions", () => {
+  test("renders accumulated current turn cards sorted by recommendation value", () => {
     const { liveBody } = liveFixture(["지원군 소환", "바퀴 부대"]);
     const buttons = [...liveBody.querySelectorAll('button[data-action="record-live-observation"]')];
     const deleteButtons = [...liveBody.querySelectorAll('button[data-action="delete-live-card"]')];
@@ -56,7 +56,9 @@ describe("current turn UI", () => {
     expect(liveBody.querySelectorAll("tr")).toHaveLength(2);
     expect(liveBody.textContent).toContain("지원군 소환");
     expect(liveBody.textContent).toContain("바퀴 부대");
-    expect(liveBody.textContent).not.toContain("정답 후보");
+    expect(liveBody.textContent).toContain("강력");
+    expect(liveBody.textContent).toContain("Y 1 / N 1");
+    expect(liveBody.textContent).toContain("최소 1명");
     expect(buttons.map((button) => button.textContent)).toEqual(["Y 기록", "N 기록", "Y 기록", "N 기록"]);
     expect(buttons.map((button) => button.dataset.result)).toEqual(["Y", "N", "Y", "N"]);
     expect(buttons.map((button) => button.dataset.cardName)).toEqual(["지원군 소환", "지원군 소환", "바퀴 부대", "바퀴 부대"]);

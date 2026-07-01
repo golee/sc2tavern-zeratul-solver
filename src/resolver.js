@@ -225,6 +225,77 @@ export function computeCandidates(cards, options = {}) {
   });
 }
 
+function getRecommendationLabel(possibleCount, guaranteedEliminated, expectedEliminated) {
+  if (possibleCount <= 1) return "확정";
+  if (guaranteedEliminated <= 0) return "낮음";
+  if (
+    guaranteedEliminated >= Math.ceil(possibleCount / 2)
+    || expectedEliminated >= possibleCount * 0.45
+  ) {
+    return "강력";
+  }
+  return "추천";
+}
+
+export function computeLiveRecommendations(cards, options = {}) {
+  const currentCards = getCleanCards(options.currentCards || []);
+  const candidates = options.candidates || computeCandidates(cards, options);
+  const possibleCandidates = candidates.filter((candidate) => candidate.possible);
+  const possibleCount = possibleCandidates.length;
+  const cardByKey = new Map(cards.map((card) => [card.key, card]));
+
+  return currentCards
+    .map((cardName, index) => {
+      const card = cardByKey.get(normalizeName(cardName));
+      if (!card) {
+        return {
+          index,
+          name: cardName,
+          key: normalizeName(cardName),
+          valid: false,
+          possibleCount,
+          yMatches: 0,
+          nMatches: possibleCount,
+          guaranteedEliminated: 0,
+          expectedEliminated: 0,
+          label: "오류",
+        };
+      }
+
+      const yMatches = possibleCandidates.filter((candidate) => isCloseCard(card, candidate)).length;
+      const nMatches = possibleCount - yMatches;
+      const worstRemaining = Math.max(yMatches, nMatches);
+      const guaranteedEliminated = Math.max(0, possibleCount - worstRemaining);
+      const expectedRemaining = possibleCount
+        ? ((yMatches ** 2) + (nMatches ** 2)) / possibleCount
+        : 0;
+      const expectedEliminated = Math.max(0, possibleCount - expectedRemaining);
+
+      return {
+        index,
+        name: card.name,
+        key: card.key,
+        valid: true,
+        possibleCount,
+        yMatches,
+        nMatches,
+        guaranteedEliminated,
+        expectedEliminated,
+        label: getRecommendationLabel(possibleCount, guaranteedEliminated, expectedEliminated),
+      };
+    })
+    .sort((left, right) => {
+      if (left.valid !== right.valid) return left.valid ? -1 : 1;
+      if (left.guaranteedEliminated !== right.guaranteedEliminated) {
+        return right.guaranteedEliminated - left.guaranteedEliminated;
+      }
+      if (left.expectedEliminated !== right.expectedEliminated) {
+        return right.expectedEliminated - left.expectedEliminated;
+      }
+      return left.index - right.index;
+    });
+}
+
 function formatNumber(value) {
   return Number.isFinite(value) ? value.toLocaleString("ko-KR") : "-";
 }

@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { ZERATUL_DEFAULT_CARD_POOL } from "../cardpool-data.js";
 import {
   computeCandidates,
+  computeLiveRecommendations,
   getConditionSummary,
   normalizeStoredObservations,
   parseCardPool,
@@ -91,6 +92,36 @@ describe("resolver deterministic behavior", () => {
     expect(failed.possible).toBe(true);
     expect(failed.manuallyFailed).toBe(true);
     expect(possibleNames(candidates)).toContain("지원군 소환");
+  });
+
+  test("ranks current turn cards by guaranteed candidate reduction", () => {
+    const cards = parseCardPool(fixturePoolText);
+    const candidates = computeCandidates(cards, {
+      currentCards: ["지원군 소환", "지뢰밭", "바퀴 부대"],
+    });
+    const recommendations = computeLiveRecommendations(cards, {
+      candidates,
+      currentCards: ["지원군 소환", "지뢰밭", "바퀴 부대"],
+    });
+
+    expect(recommendations.map((recommendation) => recommendation.name)).toEqual([
+      "지뢰밭",
+      "지원군 소환",
+      "바퀴 부대",
+    ]);
+    expect(recommendations[0]).toMatchObject({
+      label: "강력",
+      possibleCount: 4,
+      yMatches: 2,
+      nMatches: 2,
+      guaranteedEliminated: 2,
+    });
+    expect(recommendations[1]).toMatchObject({
+      label: "추천",
+      yMatches: 3,
+      nMatches: 1,
+      guaranteedEliminated: 1,
+    });
   });
 
   test("normalizes stored observations and drops invalid entries", () => {

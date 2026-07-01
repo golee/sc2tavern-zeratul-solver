@@ -493,7 +493,7 @@ td {
 
 .live-table th:nth-child(1),
 .live-table td:nth-child(1) {
-  width: 52px;
+  width: 72px;
 }
 
 .live-table th:nth-child(2),
@@ -503,11 +503,21 @@ td {
 
 .live-table th:nth-child(3),
 .live-table td:nth-child(3) {
-  width: 150px;
+  width: 96px;
 }
 
 .live-table th:nth-child(4),
 .live-table td:nth-child(4) {
+  width: 96px;
+}
+
+.live-table th:nth-child(5),
+.live-table td:nth-child(5) {
+  width: 150px;
+}
+
+.live-table th:nth-child(6),
+.live-table td:nth-child(6) {
   width: 72px;
 }
 
@@ -849,7 +859,7 @@ td {
   }
 
   .live-table table {
-    min-width: 560px;
+    min-width: 720px;
   }
 
   .candidates-table th:nth-child(1),
