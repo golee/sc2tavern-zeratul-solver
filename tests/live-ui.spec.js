@@ -86,4 +86,34 @@ describe("current turn UI", () => {
     expect(addedCards).toEqual(["지원군 소환"]);
     expect(input.value).toBe("");
   });
+
+  test("resets combobox menu scroll when rerendering and closing", () => {
+    const container = document.createElement("div");
+    const card = { name: "지원군 소환" };
+    renderInputGrid(container, "liveCard", [""], 1);
+
+    const input = container.querySelector("input");
+    const menu = container.querySelector(".combo-menu");
+    const controller = createComboboxController({
+      addLiveCard: () => {},
+      addObservation: () => {},
+      findCard: () => null,
+      getCardSuggestions: () => [card],
+    });
+
+    menu.scrollTop = 120;
+    input.value = "ㅈ";
+    controller.handleInput({ target: input, isComposing: false });
+
+    expect(menu.scrollTop).toBe(0);
+
+    menu.scrollTop = 120;
+    controller.handleKeydown({
+      key: "Escape",
+      preventDefault: () => {},
+      target: input,
+    });
+
+    expect(menu.scrollTop).toBe(0);
+  });
 });

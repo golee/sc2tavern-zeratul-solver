@@ -59,6 +59,11 @@ function getComboOptions(input) {
   return [...(getComboMenu(input)?.querySelectorAll(".combo-option") || [])];
 }
 
+function resetComboScroll(input) {
+  const menu = getComboMenu(input);
+  if (menu) menu.scrollTop = 0;
+}
+
 function setComboActive(input, nextIndex) {
   const combobox = getCombobox(input);
   const options = getComboOptions(input);
@@ -79,7 +84,10 @@ export function closeCombobox(input) {
   combobox.classList.remove("open");
   combobox.dataset.activeIndex = "-1";
   const menu = combobox.querySelector(".combo-menu");
-  if (menu) menu.replaceChildren();
+  if (menu) {
+    menu.scrollTop = 0;
+    menu.replaceChildren();
+  }
   const textInput = combobox.querySelector("input");
   if (textInput) textInput.setAttribute("aria-expanded", "false");
 }
@@ -131,6 +139,7 @@ export function createComboboxController({
     });
 
     menu.replaceChildren(...options);
+    resetComboScroll(input);
     combobox.classList.toggle("open", options.length > 0);
     combobox.dataset.activeIndex = "-1";
     input.setAttribute("aria-expanded", String(options.length > 0));
