@@ -168,6 +168,8 @@ export const ZERATUL_CARD_POOL_SOURCE = {
   rawDataUrl: "https://github.com/gameindustryremnant/SCTavernVoidSeekerPublic/tree/fc7f67f9fe89d7b6e46b0587d66c29d98703d8c5/data",
   mapUrl: "https://sc2arcade.com/map/3/158320",
   mapVersion: "0.147",
+  mapPatch: "4.6.6.3",
+  mapUpdated: "2026-11-18",
   mapArchiveSha256: "f4005c3e889414daadeac7b3840508abb3b54e0386be95abdcc350ef886f125e",
   lastChecked: "2026-11-22",
   upstreamUpdated: "2026-11-07",

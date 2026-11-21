@@ -185,6 +185,24 @@ td {
   transform: rotate(45deg);
 }
 
+.map-meta {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 0 auto;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.map-meta a,
+.map-meta time {
+  color: var(--text);
+}
+
+.map-meta a {
+  text-underline-offset: 3px;
+}
+
 .top-actions,
 .button-row,
 .filters {
@@ -764,6 +782,7 @@ td {
   }
 
   .topbar {
+    flex-wrap: wrap;
     align-items: flex-start;
     gap: 10px;
     padding: 10px 0 12px;
@@ -790,6 +809,15 @@ td {
 
   .brand h1 {
     font-size: 20px;
+  }
+
+  .map-meta {
+    order: 1;
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 16px;
+    margin: 0;
   }
 
   .top-actions {

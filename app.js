@@ -1,4 +1,4 @@
-import { ZERATUL_CARD_RENAMES, ZERATUL_DEFAULT_CARD_POOL } from "./cardpool-data.js";
+import { ZERATUL_CARD_POOL_SOURCE, ZERATUL_CARD_RENAMES, ZERATUL_DEFAULT_CARD_POOL } from "./cardpool-data.js";
 import { closestFromEvent, createToast } from "./src/app-dom.js";
 import { createCardSearch } from "./src/card-search.js";
 import {
@@ -343,6 +343,14 @@ function bindEvents() {
 function restoreCardName(name) {
   return cardSearch.findCard(ZERATUL_CARD_RENAMES.get(normalizeName(name)) ?? name)?.name;
 }
+
+const { mapUrl, mapVersion, mapPatch, mapUpdated } = ZERATUL_CARD_POOL_SOURCE;
+const mapLink = document.getElementById("mapVersionLink");
+mapLink.href = mapUrl;
+mapLink.textContent = `한국 PvP v${mapPatch} (아케이드 v${mapVersion})`;
+const mapDate = document.getElementById("mapUpdated");
+mapDate.dateTime = mapUpdated;
+mapDate.textContent = mapUpdated;
 
 state.observations = loadSessionObservations(OBSERVATIONS_STORAGE_KEY, MAX_OBSERVATIONS, restoreCardName);
 state.failedCandidateKeys = loadSessionFailedCandidates(FAILED_CANDIDATES_STORAGE_KEY, restoreCardName);

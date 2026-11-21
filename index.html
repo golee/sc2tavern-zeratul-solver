@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#151715">
     <link rel="icon" type="image/png" sizes="76x76" href="favicon.png">
     <style>html.app-loading .app-shell{visibility:hidden}</style>
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=12">
   </head>
   <body>
     <main class="app-shell">
@@ -26,6 +26,10 @@
             <p>스타선술집 PVP 카드풀 기반 후보 좁히기</p>
           </div>
         </div>
+        <p class="map-meta">
+          <span>카드 DB 기준 <a id="mapVersionLink" target="_blank" rel="noreferrer"></a></span>
+          <span>최근 맵 업데이트 <time id="mapUpdated"></time></span>
+        </p>
         <div class="top-actions">
           <button type="button" class="danger" id="resetAllBtn">전체 초기화</button>
           <button type="button" id="copyCandidatesBtn">후보 복사</button>
@@ -192,12 +196,11 @@
         <a href="https://wiki.biligame.com/sctavern/%E5%8D%A1%E7%89%8C%E5%9B%BE%E9%89%B4" target="_blank" rel="noreferrer">BWIKI 카드 도감</a>
         <a href="https://namu.moe/w/%EC%8A%A4%ED%83%80%20%EC%84%A0%EC%88%A0%EC%A7%91%20%EC%A0%84%ED%88%AC/%EC%B9%B4%EB%93%9C" target="_blank" rel="noreferrer">나무위키 카드</a>
         <a href="https://gameindustryremnant.github.io/SCTavernVoidSeekerPublic/" target="_blank" rel="noreferrer">SCTavernVoidSeekerPublic</a>
-        <a href="https://sc2arcade.com/map/3/158320" target="_blank" rel="noreferrer">한국 PvP 맵 v0.147 (2026-11-18)</a>
       </footer>
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="app.js?v=10"></script>
+    <script type="module" src="app.js?v=11"></script>
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
       const vercelInsightsScript = document.createElement("script");
