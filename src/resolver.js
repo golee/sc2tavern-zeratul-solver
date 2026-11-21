@@ -131,13 +131,17 @@ export function getCleanCards(values) {
   return result;
 }
 
-export function normalizeStoredObservations(value, maxObservations = Infinity) {
+export function normalizeStoredObservations(value, maxObservations = Infinity, restoreCardName = displayValue) {
   if (!Array.isArray(value)) return [];
 
   return value
     .map((item) => {
       const result = item?.result;
-      const cards = getCleanCards(Array.isArray(item?.cards) ? item.cards : []);
+      const storedCards = getCleanCards(Array.isArray(item?.cards) ? item.cards : []);
+      const restored = storedCards.map(restoreCardName);
+      // A removed card could have supplied the only match in a positive observation.
+      if (result === "Y" && restored.some((name) => !name)) return null;
+      const cards = getCleanCards(restored);
       if (!["Y", "N"].includes(result) || !cards.length) return null;
 
       return { result, cards };
@@ -150,9 +154,9 @@ export function normalizeStoredObservations(value, maxObservations = Infinity) {
     }));
 }
 
-export function normalizeStoredCandidateKeys(value) {
+export function normalizeStoredCandidateKeys(value, restoreCardName = displayValue) {
   if (!Array.isArray(value)) return [];
-  return [...new Set(value.map(normalizeName).filter(Boolean))];
+  return [...new Set(value.map(restoreCardName).map(normalizeName).filter(Boolean))];
 }
 
 function normalizeFailedCandidateKeys(value) {

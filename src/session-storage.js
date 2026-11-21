@@ -3,11 +3,11 @@ import {
   normalizeStoredObservations,
 } from "./resolver.js";
 
-export function loadSessionObservations(storageKey, maxObservations) {
+export function loadSessionObservations(storageKey, maxObservations, restoreCardName) {
   try {
     const stored = window.sessionStorage.getItem(storageKey);
     if (!stored) return [];
-    return normalizeStoredObservations(JSON.parse(stored), maxObservations);
+    return normalizeStoredObservations(JSON.parse(stored), maxObservations, restoreCardName);
   } catch {
     return [];
   }
@@ -29,11 +29,11 @@ export function saveSessionObservations(storageKey, observations) {
   }
 }
 
-export function loadSessionFailedCandidates(storageKey) {
+export function loadSessionFailedCandidates(storageKey, restoreCardName) {
   try {
     const stored = window.sessionStorage.getItem(storageKey);
     if (!stored) return new Set();
-    return new Set(normalizeStoredCandidateKeys(JSON.parse(stored)));
+    return new Set(normalizeStoredCandidateKeys(JSON.parse(stored), restoreCardName));
   } catch {
     return new Set();
   }

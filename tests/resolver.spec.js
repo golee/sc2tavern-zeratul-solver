@@ -29,10 +29,16 @@ describe("resolver deterministic behavior", () => {
     const cards = parseCardPool(ZERATUL_DEFAULT_CARD_POOL);
     const names = new Set(cards.map((card) => card.name));
 
-    expect(cards.length).toBeGreaterThan(100);
+    expect(cards).toHaveLength(147);
     expect(names.has("지원군 소환")).toBe(true);
-    expect(names.has("넋 잃는 자둬바오")).toBe(true);
+    expect(names.has("승천한 자둬바오")).toBe(true);
+    expect(names.has("뮤탈리스크 공습")).toBe(false);
     expect(cards.every((card) => card.key)).toBe(true);
+    const candidates = computeCandidates(cards).filter((card) => card.possible);
+    expect(candidates).toHaveLength(91);
+    expect(candidates.map((card) => card.name)).toEqual(expect.arrayContaining(["기계 감염", "죽음의 손아귀", "임기응변"]));
+    expect(cards.find((card) => card.name === "임기응변")).toMatchObject({ number: 5, value: 3000 });
+    expect(cards.find((card) => card.name === "복제 센터")).toMatchObject({ source: "일념의 차", tier: "2", enabled: false });
   });
 
   test("returns all enabled cards when there is no observation", () => {

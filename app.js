@@ -1,4 +1,4 @@
-import { ZERATUL_DEFAULT_CARD_POOL } from "./cardpool-data.js";
+import { ZERATUL_CARD_RENAMES, ZERATUL_DEFAULT_CARD_POOL } from "./cardpool-data.js";
 import { closestFromEvent, createToast } from "./src/app-dom.js";
 import { createCardSearch } from "./src/card-search.js";
 import {
@@ -49,7 +49,7 @@ const defaultPoolText = (typeof ZERATUL_DEFAULT_CARD_POOL === "string" && ZERATU
   : "카드명\t종족/타입\t티어\t사용 여부\t메모";
 
 const state = {
-  cards: [],
+  cards: parseCardPool(defaultPoolText),
   observations: [],
   currentCards: [],
   failedCandidateKeys: new Set(),
@@ -99,7 +99,6 @@ function persistFailedCandidates() {
 }
 
 function renderAll() {
-  state.cards = parseCardPool(defaultPoolText);
   const candidates = computeCandidates();
   const liveRecommendations = computeLiveRecommendations(state.cards, {
     candidates,
@@ -341,8 +340,12 @@ function bindEvents() {
   bindCandidateEvents();
 }
 
-state.observations = loadSessionObservations(OBSERVATIONS_STORAGE_KEY, MAX_OBSERVATIONS);
-state.failedCandidateKeys = loadSessionFailedCandidates(FAILED_CANDIDATES_STORAGE_KEY);
+function restoreCardName(name) {
+  return cardSearch.findCard(ZERATUL_CARD_RENAMES.get(normalizeName(name)) ?? name)?.name;
+}
+
+state.observations = loadSessionObservations(OBSERVATIONS_STORAGE_KEY, MAX_OBSERVATIONS, restoreCardName);
+state.failedCandidateKeys = loadSessionFailedCandidates(FAILED_CANDIDATES_STORAGE_KEY, restoreCardName);
 bindEvents();
 renderAll();
 document.documentElement.classList.remove("app-loading");
